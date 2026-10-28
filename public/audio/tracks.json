@@ -1,0 +1,46 @@
+{
+  "catalogVersion": "1.0.0",
+  "rightsNotice": "All built-in soundscapes are procedurally synthesized in real time via the browser Web Audio API (100% original, royalty-free, zero third-party copyright). Custom audio files placed in public/audio/ must include license and attribution entries below.",
+  "tracks": [
+    {
+      "id": "synth-deep-focus",
+      "title": "Orbital Apogee (Deep Focus)",
+      "artist": "HyperAbundance Procedural Synth Engine",
+      "mood": "deep-focus",
+      "type": "procedural-web-audio",
+      "license": "Original First-Party Procedural Synthesis (CC0 / Public Domain)",
+      "bpm": 60,
+      "description": "Warm sub-orbital analog pad in D minor9 with subtle binaural 40Hz focus harmonics."
+    },
+    {
+      "id": "synth-orbital-calm",
+      "title": "Botanical Canopy & Earthshine (Calm)",
+      "artist": "HyperAbundance Procedural Synth Engine",
+      "mood": "calm",
+      "type": "procedural-web-audio",
+      "license": "Original First-Party Procedural Synthesis (CC0 / Public Domain)",
+      "bpm": 52,
+      "description": "Weightless glass overtones, warm travertine reverb tail, and gentle harmonic swells."
+    },
+    {
+      "id": "synth-builder-flow",
+      "title": "Inventor's Meridian (Energetic Builder Flow)",
+      "artist": "HyperAbundance Procedural Synth Engine",
+      "mood": "energetic",
+      "type": "procedural-web-audio",
+      "license": "Original First-Party Procedural Synthesis (CC0 / Public Domain)",
+      "bpm": 108,
+      "description": "Optimistic polyrhythmic arpeggio pulse with warm copper-synth chord beds."
+    },
+    {
+      "id": "synth-night-horizon",
+      "title": "Terminator Line City Lights (Night Horizon)",
+      "artist": "HyperAbundance Procedural Synth Engine",
+      "mood": "night-horizon",
+      "type": "procedural-web-audio",
+      "license": "Original First-Party Procedural Synthesis (CC0 / Public Domain)",
+      "bpm": 48,
+      "description": "Deep meditative cosmic drone for late-night writing and quiet reading."
+    }
+  ]
+}
