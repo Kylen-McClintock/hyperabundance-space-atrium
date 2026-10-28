@@ -2,21 +2,19 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Html, Stars, Text, useTexture } from "@react-three/drei";
+import { Html, Sparkles, useTexture } from "@react-three/drei";
 import * as THREE from "three";
 import {
   SPATIAL_WAYPOINTS,
-  SpatialWaypoint,
+  StageId,
   getWaypointById,
 } from "@/lib/spatial/waypoint-registry";
 import {
-  AGI_FUTURES_IDEAS,
   AgiFuturesIdea,
-  SECTOR_BOOTHS,
   SectorBoothId,
 } from "@/data/agifutures-catalog";
-import { INITIAL_MEMBER_BANNERS } from "@/data/station-briefing";
 import { IdeaHologram } from "@/components/spatial/objects/IdeaHologram";
+import { Eye, EyeOff, Compass, Sparkles as SparklesIcon, RotateCcw } from "lucide-react";
 
 export type QualityTier = "high" | "balanced" | "lightweight";
 
@@ -35,493 +33,395 @@ interface OrbitalCanvasProps {
   qualityTier: QualityTier;
 }
 
+const STAGE_TEXTURES: Record<StageId, string> = {
+  "atrium-grand": "/concepts/atrium-radiant-3.png",
+  "atrium-terrace": "/concepts/atrium-radiant-1.png",
+  "pods-workbays": "/concepts/atrium-work-bays.png",
+  "pods-garden": "/concepts/orbital-garden-pods.png",
+  "levl-lounge": "/concepts/levl-lounge.png",
+  "agifutures-club": "/concepts/agifutures-club.png",
+};
+
+const STAGE_LABELS: { id: StageId; label: string; defaultWaypointId: string }[] = [
+  { id: "atrium-grand", label: "Grand Orbital Atrium", defaultWaypointId: "atrium-commons" },
+  { id: "atrium-terrace", label: "Bartender, Library & DJ Deck", defaultWaypointId: "atrium-concierge" },
+  { id: "levl-lounge", label: "LEVL Longevity Lounge", defaultWaypointId: "levl-lounge-entry" },
+  { id: "agifutures-club", label: "AGI Futures Builder Club", defaultWaypointId: "agi-club-overview" },
+  { id: "pods-workbays", label: "Earthview Bubble Pods", defaultWaypointId: "pod-earthview-1" },
+  { id: "pods-garden", label: "Botanical Canopy Pods", defaultWaypointId: "pod-earthview-2" },
+];
+
 // ============================================================================
-// 1. PROCEDURAL REALISTIC EARTH & CLOUDS BELOW THE STATION
+// 1. CURVED 3D AMPHITHEATER GEOMETRY WITH PERSPECTIVE VAULT & FLOOR CURVATURE
 // ============================================================================
-function createEarthSurfaceTexture(): THREE.CanvasTexture {
-  const canvas = document.createElement("canvas");
-  canvas.width = 2048;
-  canvas.height = 1024;
-  const ctx = canvas.getContext("2d")!;
+function createCurvedAmphitheaterGeometry(
+  width = 34,
+  height = 19.125,
+  segX = 192,
+  segY = 108
+): THREE.BufferGeometry {
+  const geo = new THREE.PlaneGeometry(width, height, segX, segY);
+  const pos = geo.attributes.position;
+  const uvs = geo.attributes.uv;
 
-  // Deep ocean gradient
-  const oceanGrad = ctx.createLinearGradient(0, 0, 0, 1024);
-  oceanGrad.addColorStop(0, "#071a3e");
-  oceanGrad.addColorStop(0.45, "#0b2b5e");
-  oceanGrad.addColorStop(0.75, "#082046");
-  oceanGrad.addColorStop(1, "#041026");
-  ctx.fillStyle = oceanGrad;
-  ctx.fillRect(0, 0, 2048, 1024);
+  for (let i = 0; i < pos.count; i++) {
+    const u = uvs.getX(i); // 0..1 left to right
+    const v = uvs.getY(i); // 0..1 bottom to top
 
-  // Continental shelf & landmass shapes
-  const continents = [
-    { x: 420, y: 360, rx: 260, ry: 170, rot: 0.3 },
-    { x: 640, y: 540, rx: 160, ry: 210, rot: -0.2 },
-    { x: 1080, y: 340, rx: 320, ry: 160, rot: 0.15 },
-    { x: 1160, y: 560, rx: 190, ry: 190, rot: 0.05 },
-    { x: 1580, y: 390, rx: 280, ry: 180, rot: -0.25 },
-    { x: 1720, y: 690, rx: 140, ry: 110, rot: 0.4 },
-  ];
+    const nx = (u - 0.5) * 2.0; // -1..1
+    const ny = (v - 0.5) * 2.0; // -1..1
 
-  continents.forEach((c) => {
-    ctx.save();
-    ctx.translate(c.x, c.y);
-    ctx.rotate(c.rot);
+    // Horizontal wrap-around amphitheater curve so side portals wrap around the viewer
+    const horizAngle = nx * 0.62;
+    const radius = 26.5;
+    const x = Math.sin(horizAngle) * radius;
+    let z = -(radius - Math.cos(horizAngle) * radius) * 1.15;
 
-    // Shallow turquoise coastal shelf
-    const shelfGrad = ctx.createRadialGradient(0, 0, c.rx * 0.2, 0, 0, c.rx * 1.15);
-    shelfGrad.addColorStop(0, "rgba(26, 155, 158, 0.35)");
-    shelfGrad.addColorStop(0.7, "rgba(14, 116, 144, 0.28)");
-    shelfGrad.addColorStop(1, "rgba(7, 26, 62, 0)");
-    ctx.fillStyle = shelfGrad;
-    ctx.beginPath();
-    ctx.ellipse(0, 0, c.rx * 1.12, c.ry * 1.12, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Landmass terrain
-    const landGrad = ctx.createLinearGradient(-c.rx, -c.ry, c.rx, c.ry);
-    landGrad.addColorStop(0, "#1c3d32");
-    landGrad.addColorStop(0.5, "#2b4c38");
-    landGrad.addColorStop(0.85, "#4a4332");
-    landGrad.addColorStop(1, "#233b2e");
-    ctx.fillStyle = landGrad;
-    ctx.beginPath();
-    ctx.ellipse(0, 0, c.rx * 0.88, c.ry * 0.82, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Golden night-terminator city light networks & coastal hubs
-    for (let i = 0; i < 95; i++) {
-      const a = (i / 95) * Math.PI * 2 + (i % 7) * 0.3;
-      const r = (0.25 + ((i * 17) % 65) / 100) * c.rx * 0.8;
-      const cx = Math.cos(a) * r;
-      const cy = Math.sin(a) * (r * (c.ry / c.rx));
-
-      const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, 14 + (i % 4) * 6);
-      glow.addColorStop(0, "rgba(255, 224, 130, 0.92)");
-      glow.addColorStop(0.35, "rgba(245, 158, 11, 0.45)");
-      glow.addColorStop(1, "rgba(245, 158, 11, 0)");
-      ctx.fillStyle = glow;
-      ctx.beginPath();
-      ctx.arc(cx, cy, 18, 0, Math.PI * 2);
-      ctx.fill();
+    // Vertical floor & ceiling vault curve (sunken glass floor projects forward, skylight arches overhead)
+    if (ny < -0.25) {
+      const floorT = Math.abs(ny + 0.25) / 0.75;
+      z += Math.pow(floorT, 1.55) * 3.85;
+    } else if (ny > 0.35) {
+      const vaultT = (ny - 0.35) / 0.65;
+      z += Math.pow(vaultT, 1.45) * 2.65;
     }
 
-    ctx.restore();
-  });
-
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.wrapS = THREE.RepeatWrapping;
-  tex.wrapT = THREE.ClampToEdgeWrapping;
-  return tex;
-}
-
-function createCloudTexture(): THREE.CanvasTexture {
-  const canvas = document.createElement("canvas");
-  canvas.width = 1024;
-  canvas.height = 512;
-  const ctx = canvas.getContext("2d")!;
-  ctx.clearRect(0, 0, 1024, 512);
-
-  for (let i = 0; i < 240; i++) {
-    const x = ((i * 73) % 1000) + 12;
-    const y = ((i * 41) % 460) + 25;
-    const rx = 28 + (i % 5) * 22;
-    const ry = 8 + (i % 3) * 7;
-    const grad = ctx.createRadialGradient(x, y, 1, x, y, rx);
-    grad.addColorStop(0, "rgba(255, 255, 255, 0.52)");
-    grad.addColorStop(0.5, "rgba(224, 242, 254, 0.24)");
-    grad.addColorStop(1, "rgba(255, 255, 255, 0)");
-    ctx.fillStyle = grad;
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.rotate(((i % 7) - 3) * 0.12);
-    ctx.beginPath();
-    ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
+    const y = ny * (height * 0.5);
+    pos.setXYZ(i, x, y, z);
   }
 
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.wrapS = THREE.RepeatWrapping;
-  tex.wrapT = THREE.ClampToEdgeWrapping;
-  return tex;
+  geo.computeVertexNormals();
+  return geo;
 }
 
-function EarthBelow({
+// ============================================================================
+// 2. CUSTOM GLSL PHOTOREALISTIC DEPTH-RELIEF & LIVE ORBITAL SHADER
+// ============================================================================
+const PHOTOREAL_VERTEX_SHADER = /* glsl */ `
+  uniform sampler2D uTexCurrent;
+  uniform sampler2D uTexNext;
+  uniform float uTransition;
+  uniform float uTime;
+  uniform float uReducedMotion;
+
+  varying vec2 vUv;
+  varying vec3 vWorldPos;
+  varying float vDepthRelief;
+
+  float computeSceneDepth(vec4 col, vec2 uv) {
+    // Deep blue/cobalt regions (Earth window + glass-floor oculus) sit deeper in 3D space
+    float blueDominance = clamp((col.b - col.r * 0.82) * 2.2, 0.0, 1.0);
+    // Warm architectural ribs, brass rings, and foreground sofas project forward
+    float warmLuminance = dot(col.rgb, vec3(0.35, 0.45, 0.20));
+    float edgeFrame = smoothstep(0.15, 0.95, abs(uv.x - 0.5) * 2.0);
+    float foregroundFloor = smoothstep(0.42, 0.0, uv.y);
+
+    float relief = (warmLuminance * 0.95 + edgeFrame * 0.45 + foregroundFloor * 0.65) - (blueDominance * 1.45);
+    return clamp(relief, -1.35, 1.35);
+  }
+
+  void main() {
+    vUv = uv;
+
+    vec4 c1 = texture2D(uTexCurrent, uv);
+    vec4 c2 = texture2D(uTexNext, uv);
+    vec4 blended = mix(c1, c2, uTransition);
+
+    float relief = computeSceneDepth(blended, uv);
+    vDepthRelief = relief;
+
+    vec3 displaced = position;
+    // Apply smooth 3D depth relief along Z + subtle warp during room transitions
+    float transitionWave = sin(uTransition * 3.14159265) * 0.85 * (1.0 - uReducedMotion);
+    displaced.z += relief * 0.95 - transitionWave * (1.0 - length(uv - 0.5));
+
+    vec4 worldPosition = modelMatrix * vec4(displaced, 1.0);
+    vWorldPos = worldPosition.xyz;
+    gl_Position = projectionMatrix * viewMatrix * worldPosition;
+  }
+`;
+
+const PHOTOREAL_FRAGMENT_SHADER = /* glsl */ `
+  uniform sampler2D uTexCurrent;
+  uniform sampler2D uTexNext;
+  uniform float uTransition;
+  uniform float uTime;
+  uniform float uFocusMode;
+  uniform float uReducedMotion;
+  uniform vec2 uPointer;
+
+  varying vec2 vUv;
+  varying vec3 vWorldPos;
+  varying float vDepthRelief;
+
+  // High-frequency hash for twinkling orbital city lights
+  float hash21(vec2 p) {
+    p = fract(p * vec2(234.34, 435.345));
+    p += dot(p, p + 34.23);
+    return fract(p.x * p.y);
+  }
+
+  void main() {
+    // Subtle depth-based micro-parallax from pointer movement
+    vec2 parallaxOffset = uPointer * vDepthRelief * 0.0048 * (1.0 - uReducedMotion);
+    vec2 uv = clamp(vUv + parallaxOffset, 0.002, 0.998);
+
+    // Smooth cross-dissolve between rooms
+    vec4 colA = texture2D(uTexCurrent, uv);
+    vec4 colB = texture2D(uTexNext, uv);
+    vec3 color = mix(colA.rgb, colB.rgb, smoothstep(0.0, 1.0, uTransition));
+
+    // 1. Detect Earth Window & Sunken Glass-Floor Lounge Pixels
+    float isEarthRegion = smoothstep(0.08, 0.35, color.b - color.r * 0.65);
+    float isCityLightOnEarth = smoothstep(0.55, 0.88, color.r) * smoothstep(0.35, 0.78, color.g) * (1.0 - smoothstep(0.45, 0.85, color.b));
+
+    if (uReducedMotion < 0.5) {
+      // Twinkling golden city-light networks on Earth & through the glass-floor pits
+      float twinkleGrid = hash21(floor(uv * 420.0));
+      float twinkle = 0.5 + 0.5 * sin(uTime * (2.4 + twinkleGrid * 4.5) + twinkleGrid * 6.2831);
+      color += color * isCityLightOnEarth * twinkle * 0.22;
+
+      // Subtle atmospheric cloud & limb shimmer over Earth
+      float cloudWave = sin(uv.x * 18.0 + uTime * 0.35) * cos(uv.y * 14.0 - uTime * 0.25);
+      color += vec3(0.04, 0.11, 0.22) * isEarthRegion * (0.5 + 0.5 * cloudWave) * 0.14;
+
+      // Dynamic Specular Light Sweep across polished marble floor, brass rings, and glass pods
+      vec2 lightPos = vec2(0.5 + sin(uTime * 0.42) * 0.28 + uPointer.x * 0.25, 0.45 + cos(uTime * 0.31) * 0.22 + uPointer.y * 0.2);
+      float distToLight = length(uv - lightPos);
+      float luma = dot(color, vec3(0.299, 0.587, 0.114));
+      float specMask = smoothstep(0.45, 0.92, luma) * smoothstep(0.55, 0.0, distToLight);
+      color += vec3(1.0, 0.93, 0.78) * specMask * 0.09;
+
+      // Subtle diagonal volumetric golden sun-shafts from upper skylight arch
+      float rayCoord = uv.x * 0.85 + uv.y * 0.55;
+      float godRay = pow(0.5 + 0.5 * sin(rayCoord * 16.0 - uTime * 0.28), 4.0);
+      float upperFade = smoothstep(0.15, 0.95, uv.y) * (1.0 - smoothstep(0.0, 0.38, abs(uv.x - 0.5)));
+      color += vec3(1.0, 0.88, 0.62) * godRay * upperFade * 0.045;
+    }
+
+    // 2. Focus Mode Sanctuary Toning (Warm golden rim + calm ambient dimming)
+    if (uFocusMode > 0.01) {
+      vec3 focusToned = color * mix(vec3(0.82, 0.86, 0.94), vec3(1.08, 1.02, 0.95), isEarthRegion);
+      color = mix(color, focusToned, uFocusMode * 0.65);
+    }
+
+    // 3. Soft vignette at extreme outer edges of the 3D dome
+    float edgeVignette = smoothstep(1.38, 0.75, length((vUv - 0.5) * vec2(1.65, 1.35)));
+    color *= mix(0.72, 1.0, edgeVignette);
+
+    gl_FragColor = vec4(color, 1.0);
+  }
+`;
+
+// ============================================================================
+// 3. PHOTOREALISTIC 3D CURVED STAGE COMPONENT
+// ============================================================================
+function PhotorealCurvedStage({
+  activeStageId,
   isFocusMode,
   reducedMotion,
-  qualityTier,
+  pointerRef,
 }: {
+  activeStageId: StageId;
   isFocusMode: boolean;
   reducedMotion: boolean;
-  qualityTier: QualityTier;
+  pointerRef: React.MutableRefObject<{ x: number; y: number }>;
 }) {
-  const earthRef = useRef<THREE.Mesh>(null);
-  const cloudsRef = useRef<THREE.Mesh>(null);
+  const { gl } = useThree();
 
-  const earthTex = useMemo(() => createEarthSurfaceTexture(), []);
-  const cloudTex = useMemo(() => createCloudTexture(), []);
+  const textures = useTexture(STAGE_TEXTURES);
 
-  const segments = qualityTier === "high" ? 96 : qualityTier === "balanced" ? 64 : 40;
+  // Configure maximum anisotropic filtering & sRGB color space for razor-sharp 4K detail
+  useEffect(() => {
+    const maxAniso = gl.capabilities.getMaxAnisotropy();
+    Object.values(textures).forEach((tex) => {
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.anisotropy = Math.min(16, maxAniso);
+      tex.minFilter = THREE.LinearMipmapLinearFilter;
+      tex.magFilter = THREE.LinearFilter;
+      tex.needsUpdate = true;
+    });
+  }, [textures, gl]);
 
-  useFrame((_, delta) => {
-    if (reducedMotion || document.hidden) return;
-    // Ultra-subtle rotation; even slower during Focus Mode per spec Section 4
-    const speed = isFocusMode ? 0.0018 : 0.0055;
-    if (earthRef.current) {
-      earthRef.current.rotation.y += delta * speed;
+  const geometry = useMemo(
+    () => createCurvedAmphitheaterGeometry(34, 19.125, 192, 108),
+    []
+  );
+
+  const prevStageRef = useRef<StageId>(activeStageId);
+  const transitionRef = useRef(1);
+
+  const uniforms = useMemo(
+    () => ({
+      uTexCurrent: { value: textures[activeStageId] },
+      uTexNext: { value: textures[activeStageId] },
+      uTransition: { value: 1.0 },
+      uTime: { value: 0 },
+      uFocusMode: { value: 0 },
+      uReducedMotion: { value: reducedMotion ? 1.0 : 0.0 },
+      uPointer: { value: new THREE.Vector2(0, 0) },
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
+
+  useEffect(() => {
+    if (prevStageRef.current !== activeStageId) {
+      uniforms.uTexCurrent.value = textures[prevStageRef.current];
+      uniforms.uTexNext.value = textures[activeStageId];
+      transitionRef.current = reducedMotion ? 1.0 : 0.0;
+      uniforms.uTransition.value = transitionRef.current;
+      prevStageRef.current = activeStageId;
+    } else {
+      uniforms.uTexCurrent.value = textures[activeStageId];
+      uniforms.uTexNext.value = textures[activeStageId];
     }
-    if (cloudsRef.current) {
-      cloudsRef.current.rotation.y += delta * speed * 1.25;
+  }, [activeStageId, textures, uniforms, reducedMotion]);
+
+  useFrame((state, delta) => {
+    const dt = Math.min(delta, 0.1);
+    uniforms.uTime.value = state.clock.elapsedTime;
+    uniforms.uReducedMotion.value = reducedMotion ? 1.0 : 0.0;
+
+    // Smoothly interpolate transition between stages
+    if (transitionRef.current < 1.0) {
+      transitionRef.current = Math.min(1.0, transitionRef.current + dt * 1.85);
+      uniforms.uTransition.value = transitionRef.current;
     }
+
+    // Smoothly interpolate focus mode uniform
+    const targetFocus = isFocusMode ? 1.0 : 0.0;
+    uniforms.uFocusMode.value = THREE.MathUtils.lerp(
+      uniforms.uFocusMode.value,
+      targetFocus,
+      dt * 3.0
+    );
+
+    // Smoothly interpolate pointer parallax vector
+    uniforms.uPointer.value.lerp(
+      new THREE.Vector2(pointerRef.current.x, pointerRef.current.y),
+      dt * 6.0
+    );
   });
 
   return (
-    <group position={[0, -142, -52]} rotation={[0.38, -0.4, 0.08]}>
-      {/* Primary Earth Sphere */}
-      <mesh ref={earthRef}>
-        <sphereGeometry args={[136, segments, segments]} />
-        <meshStandardMaterial
-          map={earthTex}
-          roughness={0.62}
-          metalness={0.12}
-          emissive="#1e3a8a"
-          emissiveIntensity={0.28}
-        />
-      </mesh>
-
-      {/* Atmospheric Cloud Layer */}
-      <mesh ref={cloudsRef}>
-        <sphereGeometry args={[136.9, segments, segments]} />
-        <meshStandardMaterial
-          map={cloudTex}
-          transparent
-          opacity={0.78}
-          depthWrite={false}
-          roughness={0.9}
-        />
-      </mesh>
-
-      {/* Rayleigh Cyan-Cobalt Atmospheric Limb Glow */}
-      <mesh>
-        <sphereGeometry args={[138.6, 64, 64]} />
-        <meshBasicMaterial
-          color="#38bdf8"
-          transparent
-          opacity={0.18}
-          side={THREE.BackSide}
-        />
-      </mesh>
-      <mesh>
-        <sphereGeometry args={[141.2, 48, 48]} />
-        <meshBasicMaterial
-          color="#60a5fa"
-          transparent
-          opacity={0.08}
-          side={THREE.BackSide}
-        />
-      </mesh>
-    </group>
+    <mesh geometry={geometry} position={[0, 0, -11.0]}>
+      <shaderMaterial
+        vertexShader={PHOTOREAL_VERTEX_SHADER}
+        fragmentShader={PHOTOREAL_FRAGMENT_SHADER}
+        uniforms={uniforms}
+        toneMapped={false}
+      />
+    </mesh>
   );
 }
 
 // ============================================================================
-// 2. BRAND PORTAL SIGNAGE (Supplied Actual LEVL & AGI Futures Logos)
+// 4. SLEEK ROOM-SCOPED SPATIAL BEACONS (No Cross-Room Clutter!)
 // ============================================================================
-function BrandPortalSignage({
-  onSelectWaypoint,
-}: {
-  onSelectWaypoint: (id: string) => void;
-}) {
-  const [levlTex, agiTex] = useTexture([
-    "/brands/levl-logo-long.png",
-    "/brands/agi-futures-logo.png",
-  ]);
-
-  return (
-    <group>
-      {/* WEST PORTAL: LEVL LONGEVITY LOUNGE */}
-      <group
-        position={[-13.8, 4.35, -3.5]}
-        rotation={[0, Math.PI / 2.6, 0]}
-        onClick={(e) => {
-          e.stopPropagation();
-          onSelectWaypoint("levl-lounge-entry");
-        }}
-      >
-        <mesh position={[0, 0, -0.06]}>
-          <planeGeometry args={[5.4, 1.55]} />
-          <meshStandardMaterial
-            color="#07131e"
-            roughness={0.3}
-            metalness={0.6}
-            emissive="#0d9488"
-            emissiveIntensity={0.15}
-          />
-        </mesh>
-        <mesh position={[0, 0.08, 0]}>
-          <planeGeometry args={[4.2, 0.95]} />
-          <meshBasicMaterial map={levlTex} transparent toneMapped={false} />
-        </mesh>
-        <Text
-          position={[0, -0.56, 0.02]}
-          fontSize={0.18}
-          letterSpacing={0.18}
-          color="#99f6e4"
-        >
-          LONGEVITY LOUNGE & PROTOCOL SPA →
-        </Text>
-      </group>
-
-      {/* EAST PORTAL: AGI FUTURES INVENTOR'S CLUB */}
-      <group
-        position={[13.8, 4.35, -3.5]}
-        rotation={[0, -Math.PI / 2.6, 0]}
-        onClick={(e) => {
-          e.stopPropagation();
-          onSelectWaypoint("agi-club-overview");
-        }}
-      >
-        <mesh position={[0, 0, -0.06]}>
-          <planeGeometry args={[5.6, 1.55]} />
-          <meshStandardMaterial
-            color="#06140e"
-            roughness={0.3}
-            metalness={0.6}
-            emissive="#10b981"
-            emissiveIntensity={0.15}
-          />
-        </mesh>
-        <mesh position={[0, 0.06, 0]}>
-          <planeGeometry args={[4.8, 1.05]} />
-          <meshBasicMaterial map={agiTex} transparent toneMapped={false} />
-        </mesh>
-        <Text
-          position={[0, -0.56, 0.02]}
-          fontSize={0.17}
-          letterSpacing={0.16}
-          color="#6ee7b7"
-        >
-          ← INVENTOR&apos;S CLUB & 33 HOLO BLUEPRINTS
-        </Text>
-      </group>
-    </group>
-  );
-}
-
-// ============================================================================
-// 3. OUTWARD-PROTRUDING EARTHVIEW BUBBLE PODS (Section 4 Non-Negotiable)
-// ============================================================================
-function OutwardEarthviewBubblePod({
-  waypoint,
-  isCurrent,
-  onSelect,
-}: {
-  waypoint: SpatialWaypoint;
-  isCurrent: boolean;
-  onSelect: () => void;
-}) {
-  const [mx, my, mz] = waypoint.markerPos;
-
-  return (
-    <group position={[mx, my, mz]}>
-      {/* 1. Circular Entrance Collar FLUSH with Interior Atrium Hull Wall */}
-      <mesh position={[0, 0, 0.45]}>
-        <torusGeometry args={[1.65, 0.14, 20, 48]} />
-        <meshStandardMaterial
-          color="#e7d8c1"
-          metalness={0.65}
-          roughness={0.22}
-          emissive={isCurrent ? "#38bdf8" : "#f59e0b"}
-          emissiveIntensity={isCurrent ? 0.55 : 0.25}
-        />
-      </mesh>
-
-      {/* 2. Convex Glass Bubble Protruding OUTWARD Through the Exterior Hull */}
-      <mesh
-        position={[0, 0, -1.35]}
-        onClick={(e) => {
-          e.stopPropagation();
-          onSelect();
-        }}
-      >
-        <sphereGeometry args={[2.15, 36, 36]} />
-        <meshPhysicalMaterial
-          color="#e0f2fe"
-          transparent
-          opacity={0.22}
-          roughness={0.06}
-          metalness={0.05}
-          transmission={0.75}
-          side={THREE.DoubleSide}
-        />
-      </mesh>
-
-      {/* Outward Hull Structural Rib Ring */}
-      <mesh position={[0, 0, -1.35]} rotation={[0, Math.PI / 2, 0]}>
-        <torusGeometry args={[2.14, 0.045, 16, 48]} />
-        <meshStandardMaterial color="#d6c5ad" metalness={0.7} roughness={0.25} />
-      </mesh>
-
-      {/* Interior Pod Floor Platform (Glass Bottom + Warm Walnut Trim) */}
-      <mesh position={[0, -1.15, -1.25]}>
-        <cylinderGeometry args={[1.72, 1.52, 0.12, 36]} />
-        <meshStandardMaterial color="#3e2c1e" roughness={0.4} metalness={0.2} />
-      </mesh>
-
-      {/* Outward-Facing curved Walnut Work Desk (Faces -Z toward Earth!) */}
-      <mesh position={[0, -0.42, -2.25]}>
-        <boxGeometry args={[1.65, 0.07, 0.68]} />
-        <meshStandardMaterial color="#5c3d28" roughness={0.35} metalness={0.15} />
-      </mesh>
-
-      {/* Transparent Dual Holographic Work Monitors Facing Outward */}
-      <mesh position={[-0.38, -0.05, -2.42]} rotation={[0, 0.15, 0]}>
-        <planeGeometry args={[0.62, 0.38]} />
-        <meshBasicMaterial color="#38bdf8" transparent opacity={0.42} />
-      </mesh>
-      <mesh position={[0.38, -0.05, -2.42]} rotation={[0, -0.15, 0]}>
-        <planeGeometry args={[0.62, 0.38]} />
-        <meshBasicMaterial color="#34d399" transparent opacity={0.42} />
-      </mesh>
-
-      {/* Ergonomic Chair Facing Outward Toward Earth */}
-      <mesh position={[0, -0.65, -1.45]}>
-        <cylinderGeometry args={[0.32, 0.32, 0.55, 20]} />
-        <meshStandardMaterial color="#e5e0d8" roughness={0.6} />
-      </mesh>
-
-      {/* Botanical Planters Inside the Bubble Pod */}
-      <mesh position={[-1.25, -0.65, -1.5]}>
-        <sphereGeometry args={[0.36, 12, 12]} />
-        <meshStandardMaterial color="#15803d" roughness={0.8} />
-      </mesh>
-      <mesh position={[1.25, -0.65, -1.5]}>
-        <sphereGeometry args={[0.36, 12, 12]} />
-        <meshStandardMaterial color="#166534" roughness={0.8} />
-      </mesh>
-
-      {/* Clickable Pod Pill in 3D Space (Hidden when already inside this pod) */}
-      {!isCurrent && (
-        <Html position={[0, 1.35, 0.4]} center distanceFactor={14} zIndexRange={[10, 0]}>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onSelect();
-            }}
-            className="cursor-pointer rounded-full border border-sky-300/50 bg-slate-950/85 px-3 py-1 text-[11px] font-medium whitespace-nowrap text-sky-100 shadow-lg backdrop-blur-md transition hover:border-sky-300 hover:bg-sky-950/90"
-          >
-            ◦ {waypoint.shortLabel} ({waypoint.elevationLabel})
-          </button>
-        </Html>
-      )}
-    </group>
-  );
-}
-
-// ============================================================================
-// 4. SUNKEN GLASS-BOTTOM LOUNGE PITS (Section 4 Non-Negotiable)
-// ============================================================================
-function SunkenGlassFloorLoungePit({
-  position,
-  label,
-  onSelect,
-}: {
-  position: [number, number, number];
+interface SpatialBeaconSpec {
+  id: string;
   label: string;
-  onSelect: () => void;
+  sublabel: string;
+  accent: "cyan" | "emerald" | "amber" | "teal";
+  position: [number, number, number];
+  onTrigger: () => void;
+}
+
+function SpatialHotspotBeacon({
+  beacon,
+  isActive,
+  reducedMotion,
+}: {
+  beacon: SpatialBeaconSpec;
+  isActive: boolean;
+  reducedMotion: boolean;
 }) {
+  const ringRef = useRef<THREE.Mesh>(null);
+  const [hovered, setHovered] = useState(false);
+
+  const colorHex =
+    beacon.accent === "emerald"
+      ? "#34d399"
+      : beacon.accent === "teal"
+      ? "#2dd4bf"
+      : beacon.accent === "amber"
+      ? "#fbbf24"
+      : "#38bdf8";
+
+  useFrame((state) => {
+    if (!ringRef.current || reducedMotion) return;
+    const pulse = 1 + Math.sin(state.clock.elapsedTime * 2.6 + beacon.position[0]) * 0.08;
+    ringRef.current.scale.setScalar(hovered || isActive ? pulse * 1.22 : pulse);
+  });
+
   return (
-    <group position={position}>
-      {/* Outer Champagne-Brass Rim Flush with Atrium Deck */}
-      <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[3.65, 4.15, 64]} />
-        <meshStandardMaterial
-          color="#d6c3a5"
-          metalness={0.65}
-          roughness={0.25}
-          emissive="#f59e0b"
-          emissiveIntensity={0.22}
-        />
-      </mesh>
-
-      {/* Recessed Step Wall */}
-      <mesh position={[0, -0.35, 0]}>
-        <cylinderGeometry args={[3.68, 3.45, 0.7, 64, 1, true]} />
-        <meshStandardMaterial
-          color="#3b2f26"
-          roughness={0.45}
-          side={THREE.DoubleSide}
-        />
-      </mesh>
-
-      {/* TRANSPARENT GLASS FLOOR INSIDE THE SEATING PIT (Earth Clearly Visible Beneath Feet!) */}
+    <group position={beacon.position}>
+      {/* Glowing 3D Spatial Target Ring */}
       <mesh
-        position={[0, -0.68, 0]}
-        rotation={[-Math.PI / 2, 0, 0]}
+        ref={ringRef}
         onClick={(e) => {
           e.stopPropagation();
-          onSelect();
+          beacon.onTrigger();
         }}
+        onPointerOver={() => setHovered(true)}
+        onPointerOut={() => setHovered(false)}
       >
-        <circleGeometry args={[3.44, 64]} />
-        <meshPhysicalMaterial
-          color="#bae6fd"
+        <ringGeometry args={[0.26, 0.34, 32]} />
+        <meshBasicMaterial
+          color={colorHex}
           transparent
-          opacity={0.14}
-          roughness={0.05}
-          metalness={0.08}
+          opacity={hovered || isActive ? 0.95 : 0.65}
           side={THREE.DoubleSide}
         />
       </mesh>
 
-      {/* Structural Glass Radial Mullion Rings so the Glass Floor Reads Clearly Above Earth */}
-      <mesh position={[0, -0.67, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[1.65, 1.71, 48]} />
-        <meshBasicMaterial color="#eab308" transparent opacity={0.55} />
-      </mesh>
-      <mesh position={[0, -0.67, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[3.35, 3.44, 64]} />
-        <meshBasicMaterial color="#eab308" transparent opacity={0.65} />
-      </mesh>
-
-      {/* Curved Perimeter Bouclé Sofa Ring (Open at top for step-in, leaving central glass floor unobstructed) */}
-      <mesh position={[0, -0.32, 0]} rotation={[Math.PI / 2, 0, 0.4]}>
-        <torusGeometry args={[2.75, 0.46, 20, 48, Math.PI * 1.65]} />
-        <meshStandardMaterial color="#f5f0e6" roughness={0.75} metalness={0.05} />
-      </mesh>
-
-      {/* Glass-Top Coffee Table (Legible Earth View Beneath Table) */}
-      <mesh position={[0, -0.32, 0]}>
-        <cylinderGeometry args={[1.05, 1.05, 0.04, 36]} />
-        <meshPhysicalMaterial
-          color="#e0f2fe"
+      {/* Center Luminous Dot */}
+      <mesh
+        onClick={(e) => {
+          e.stopPropagation();
+          beacon.onTrigger();
+        }}
+      >
+        <circleGeometry args={[0.1, 24]} />
+        <meshBasicMaterial
+          color="#ffffff"
           transparent
-          opacity={0.28}
-          roughness={0.08}
-        />
-      </mesh>
-      <mesh position={[0, -0.5, 0]}>
-        <cylinderGeometry args={[0.85, 0.85, 0.34, 24, 1, true]} />
-        <meshStandardMaterial
-          color="#d4af37"
-          metalness={0.8}
-          roughness={0.2}
-          wireframe
+          opacity={hovered || isActive ? 0.95 : 0.75}
         />
       </mesh>
 
-      <Html position={[0, 0.55, 0]} center distanceFactor={14} zIndexRange={[10, 0]}>
+      {/* Sleek Glassmorphic Spatial Pin */}
+      <Html
+        position={[0, 0.48, 0]}
+        center
+        distanceFactor={15}
+        zIndexRange={[10, 0]}
+      >
         <button
           type="button"
           onClick={(e) => {
             e.stopPropagation();
-            onSelect();
+            beacon.onTrigger();
           }}
-          className="cursor-pointer rounded-full border border-amber-300/45 bg-slate-950/80 px-3 py-1 text-[11px] font-medium whitespace-nowrap text-amber-100 shadow-lg backdrop-blur-md transition hover:border-amber-200"
+          onMouseEnter={() => setHovered(true)}
+          onMouseLeave={() => setHovered(false)}
+          className={`group flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1 text-left shadow-xl backdrop-blur-md transition-all duration-200 ${
+            isActive
+              ? "border-amber-300/80 bg-slate-950/90 text-white ring-2 ring-amber-400/30"
+              : "border-white/25 bg-slate-950/65 text-slate-100 hover: scale-105 hover:border-sky-300/80 hover:bg-slate-950/90"
+          }`}
         >
-          ▾ {label} (Earth-Glass Floor)
+          <span
+            className="h-2 w-2 shrink-0 rounded-full shadow-sm"
+            style={{ backgroundColor: colorHex, boxShadow: `0 0 8px ${colorHex}` }}
+          />
+          <span className="text-[11px] font-semibold tracking-wide whitespace-nowrap">
+            {beacon.label}
+          </span>
+          <span className="hidden text-[10px] text-slate-300/85 group-hover:inline whitespace-nowrap">
+            • {beacon.sublabel}
+          </span>
         </button>
       </Html>
     </group>
@@ -529,9 +429,10 @@ function SunkenGlassFloorLoungePit({
 }
 
 // ============================================================================
-// 5. SHARED ATRIUM, LEVL LOUNGE & AGI FUTURES WING ARCHITECTURE
+// 5. ROOM-SCOPED SPATIAL OVERLAYS & HOLOGRAMS
 // ============================================================================
-function StationArchitecture({
+function StageInteractiveOverlays({
+  activeStageId,
   activeWaypointId,
   onSelectWaypoint,
   activeIdea,
@@ -542,7 +443,9 @@ function StationArchitecture({
   onOpenMatchingDrawer,
   onOpenConciergeDrawer,
   reducedMotion,
+  showBeacons,
 }: {
+  activeStageId: StageId;
   activeWaypointId: string;
   onSelectWaypoint: (id: string) => void;
   activeIdea: AgiFuturesIdea;
@@ -553,596 +456,396 @@ function StationArchitecture({
   onOpenMatchingDrawer: () => void;
   onOpenConciergeDrawer: () => void;
   reducedMotion: boolean;
+  showBeacons: boolean;
 }) {
-  const focusPods = useMemo(
-    () => SPATIAL_WAYPOINTS.filter((wp) => wp.kind === "focus_pod"),
-    []
-  );
+  const beacons = useMemo<SpatialBeaconSpec[]>(() => {
+    if (activeStageId === "atrium-grand") {
+      return [
+        {
+          id: "levl-lounge-entry",
+          label: "LEVL Longevity Lounge",
+          sublabel: "Enter West Wing →",
+          accent: "teal",
+          position: [-11.8, 0.35, -8.8],
+          onTrigger: () => onSelectWaypoint("levl-lounge-entry"),
+        },
+        {
+          id: "agi-club-overview",
+          label: "AGI Futures Club",
+          sublabel: "Enter East Wing →",
+          accent: "emerald",
+          position: [11.8, 0.35, -8.8],
+          onTrigger: () => onSelectWaypoint("agi-club-overview"),
+        },
+        {
+          id: "lounge-pit-west",
+          label: "West Earth-Glass Lounge",
+          sublabel: "Sunken Glass Floor",
+          accent: "amber",
+          position: [-5.4, -3.5, -8.6],
+          onTrigger: () => onSelectWaypoint("lounge-pit-west"),
+        },
+        {
+          id: "lounge-pit-east",
+          label: "East Earth-Glass Lounge",
+          sublabel: "Sunken Glass Floor",
+          accent: "amber",
+          position: [5.6, -3.5, -8.6],
+          onTrigger: () => onSelectWaypoint("lounge-pit-east"),
+        },
+        {
+          id: "pod-earthview-1",
+          label: "Bubble Pod α1",
+          sublabel: "+24 ft Outward Pod",
+          accent: "cyan",
+          position: [-8.2, 4.3, -9.2],
+          onTrigger: () => onSelectWaypoint("pod-earthview-1"),
+        },
+        {
+          id: "pod-earthview-2",
+          label: "Bubble Pod α2",
+          sublabel: "+28 ft Apex Pod",
+          accent: "cyan",
+          position: [-4.6, 5.4, -10.2],
+          onTrigger: () => onSelectWaypoint("pod-earthview-2"),
+        },
+        {
+          id: "pod-earthview-3",
+          label: "Bubble Pod β1",
+          sublabel: "+28 ft Apex Pod",
+          accent: "cyan",
+          position: [5.4, 2.8, -10.2],
+          onTrigger: () => onSelectWaypoint("pod-earthview-3"),
+        },
+        {
+          id: "pod-earthview-4",
+          label: "Bubble Pod β2",
+          sublabel: "+24 ft Outward Pod",
+          accent: "cyan",
+          position: [10.2, 4.2, -9.0],
+          onTrigger: () => onSelectWaypoint("pod-earthview-4"),
+        },
+        {
+          id: "atrium-concierge",
+          label: "Bartender, Library & DJ Terrace",
+          sublabel: "AI Concierge & Briefing",
+          accent: "amber",
+          position: [0.0, -0.8, -10.2],
+          onTrigger: () => onSelectWaypoint("atrium-concierge"),
+        },
+      ];
+    }
 
-  // Build atrium deck with two circular cutouts for the sunken glass-bottom lounges
-  const atriumDeckGeometry = useMemo(() => {
-    const shape = new THREE.Shape();
-    shape.absarc(0, -4, 18.5, 0, Math.PI * 2, false);
+    if (activeStageId === "atrium-terrace") {
+      return [
+        {
+          id: "levl-protocol-bar",
+          label: "Holographic AI Bartender (Sora)",
+          sublabel: "Open LEVL Protocol Bar",
+          accent: "teal",
+          position: [-9.2, -0.4, -9.2],
+          onTrigger: () => onOpenLevlDrawer("zone-2-and-vo2max-training"),
+        },
+        {
+          id: "conservatory-deck",
+          label: "Circular Glass Botanical Library",
+          sublabel: "Station Briefing & Reading Nook",
+          accent: "amber",
+          position: [-2.2, 0.5, -10.2],
+          onTrigger: () => onOpenConciergeDrawer(),
+        },
+        {
+          id: "agi-holo-table",
+          label: "AGI Futures Hologram Lab",
+          sublabel: "Inspect 33 Startup Blueprints",
+          accent: "emerald",
+          position: [6.4, -0.8, -9.6],
+          onTrigger: () => onOpenIdeaDrawer(activeIdea),
+        },
+        {
+          id: "pod-earthview-1",
+          label: "Upper West Bubble Pods",
+          sublabel: "Enter Focus Pod Bay",
+          accent: "cyan",
+          position: [-6.4, 3.8, -9.6],
+          onTrigger: () => onSelectWaypoint("pod-earthview-1"),
+        },
+        {
+          id: "pod-earthview-4",
+          label: "Upper East Bubble Pods",
+          sublabel: "Enter Focus Pod Bay",
+          accent: "cyan",
+          position: [6.8, 3.8, -9.6],
+          onTrigger: () => onSelectWaypoint("pod-earthview-4"),
+        },
+        {
+          id: "atrium-commons",
+          label: "← Return to Grand Atrium",
+          sublabel: "Overview Vista",
+          accent: "cyan",
+          position: [0.0, -3.8, -8.8],
+          onTrigger: () => onSelectWaypoint("atrium-commons"),
+        },
+      ];
+    }
 
-    const westHole = new THREE.Path();
-    westHole.absarc(-5.8, 5.5, 3.65, 0, Math.PI * 2, true);
-    shape.holes.push(westHole);
+    if (activeStageId === "levl-lounge") {
+      return [
+        {
+          id: "levl-protocol-bar",
+          label: "LEVL Alabaster Protocol Bar",
+          sublabel: "Draft Protocol & PubMed RCTs",
+          accent: "teal",
+          position: [-9.2, -0.9, -9.4],
+          onTrigger: () => {
+            onSelectWaypoint("levl-protocol-bar");
+            onOpenLevlDrawer("zone-2-and-vo2max-training");
+          },
+        },
+        {
+          id: "levl-screening-wall",
+          label: "Research Screening Wall",
+          sublabel: "Living Longer • Living Better (Auto-Ducks DJ)",
+          accent: "amber",
+          position: [9.4, 0.2, -9.4],
+          onTrigger: () => {
+            onSelectWaypoint("levl-screening-wall");
+            onOpenScreeningModal();
+          },
+        },
+        {
+          id: "levl-spa-sauna",
+          label: "Finnish Sauna & Cold Plunge Suite",
+          sublabel: "80°C Heat & 12°C Cold Evidence",
+          accent: "amber",
+          position: [-6.4, 2.3, -10.2],
+          onTrigger: () => {
+            onSelectWaypoint("levl-spa-sauna");
+            onOpenLevlDrawer("finnish-sauna");
+          },
+        },
+        {
+          id: "levl-spa-hbot",
+          label: "HBOT & Photobiomodulation Alcove",
+          sublabel: "2.0 ATA Hyperbaric & 660nm NIR",
+          accent: "cyan",
+          position: [6.4, 2.4, -10.2],
+          onTrigger: () => {
+            onSelectWaypoint("levl-spa-hbot");
+            onOpenLevlDrawer("hyperbaric-oxygen-therapy");
+          },
+        },
+        {
+          id: "levl-lounge-entry",
+          label: "LEVL Sunken Earth-Glass Pit",
+          sublabel: "Center Conversation Lounge",
+          accent: "teal",
+          position: [0.6, -3.2, -9.0],
+          onTrigger: () => onSelectWaypoint("levl-lounge-entry"),
+        },
+        {
+          id: "atrium-commons",
+          label: "← Return to Central Atrium",
+          sublabel: "Main Hub",
+          accent: "cyan",
+          position: [-11.5, -3.6, -8.5],
+          onTrigger: () => onSelectWaypoint("atrium-commons"),
+        },
+      ];
+    }
 
-    const eastHole = new THREE.Path();
-    eastHole.absarc(5.8, 5.5, 3.65, 0, Math.PI * 2, true);
-    shape.holes.push(eastHole);
+    if (activeStageId === "agifutures-club") {
+      return [
+        {
+          id: "agi-booth-homes",
+          label: "Booth 1: Homes & Cities",
+          sublabel: "Signal House, Porchfront, Hearth",
+          accent: "emerald",
+          position: [-9.2, -0.6, -9.2],
+          onTrigger: () => {
+            onSelectWaypoint("agi-booth-homes");
+            onOpenIdeaDrawer(sectorIdeaMap["homes-cities"] || activeIdea);
+          },
+        },
+        {
+          id: "agi-booth-energy",
+          label: "Booth 2: Clean Energy & Planet",
+          sublabel: "HelioTerra, Skyhold, Wild Return",
+          accent: "amber",
+          position: [-5.4, 0.6, -10.2],
+          onTrigger: () => {
+            onSelectWaypoint("agi-booth-energy");
+            onOpenIdeaDrawer(sectorIdeaMap["clean-energy-planet"] || activeIdea);
+          },
+        },
+        {
+          id: "agi-booth-biotech",
+          label: "Booth 3: Biotech & Longevity",
+          sublabel: "BioWalls, BioArk, BiomeX",
+          accent: "teal",
+          position: [-2.2, 0.9, -10.4],
+          onTrigger: () => {
+            onSelectWaypoint("agi-booth-biotech");
+            onOpenIdeaDrawer(sectorIdeaMap["biotech-longevity"] || activeIdea);
+          },
+        },
+        {
+          id: "agi-booth-ai",
+          label: "Booth 4: AI & Enterprise",
+          sublabel: "Main Street Legacy, AI Founder Lab",
+          accent: "cyan",
+          position: [5.4, 0.5, -10.2],
+          onTrigger: () => {
+            onSelectWaypoint("agi-booth-ai");
+            onOpenIdeaDrawer(sectorIdeaMap["ai-autonomous-enterprise"] || activeIdea);
+          },
+        },
+        {
+          id: "agi-builder-guide",
+          label: "AI Builder Guide (Kaelen)",
+          sublabel: "14-Day Experiments & Assumptions",
+          accent: "emerald",
+          position: [9.2, -0.8, -9.2],
+          onTrigger: () => {
+            onSelectWaypoint("agi-builder-guide");
+            onOpenIdeaDrawer(activeIdea);
+          },
+        },
+        {
+          id: "agi-matching-wall",
+          label: "Founder Matching Wall",
+          sublabel: "Building • Looking For • Can Help",
+          accent: "amber",
+          position: [3.2, 2.2, -10.2],
+          onTrigger: () => {
+            onSelectWaypoint("agi-matching-wall");
+            onOpenMatchingDrawer();
+          },
+        },
+        {
+          id: "atrium-commons",
+          label: "← Return to Central Atrium",
+          sublabel: "Main Hub",
+          accent: "cyan",
+          position: [-11.5, -3.6, -8.5],
+          onTrigger: () => onSelectWaypoint("atrium-commons"),
+        },
+      ];
+    }
 
-    return new THREE.ShapeGeometry(shape, 64);
-  }, []);
+    // Pods-workbays or Pods-garden
+    return [
+      {
+        id: "pod-earthview-1",
+        label: "Pod α1 (Upper West Bay)",
+        sublabel: "+24 ft Earthview Desk",
+        accent: "cyan",
+        position: [-5.8, 2.6, -9.6],
+        onTrigger: () => onSelectWaypoint("pod-earthview-1"),
+      },
+      {
+        id: "pod-earthview-2",
+        label: "Pod α2 (Canopy Bubble Pod)",
+        sublabel: "+28 ft Botanical Canopy",
+        accent: "emerald",
+        position: [-4.2, 4.4, -10.0],
+        onTrigger: () => onSelectWaypoint("pod-earthview-2"),
+      },
+      {
+        id: "pod-earthview-4",
+        label: "Pod β2 (Upper East Bay)",
+        sublabel: "+24 ft Earthview Desk",
+        accent: "cyan",
+        position: [5.8, 2.6, -9.6],
+        onTrigger: () => onSelectWaypoint("pod-earthview-4"),
+      },
+      {
+        id: "lounge-pit-west",
+        label: "West Sunken Glass Lounge",
+        sublabel: "Earth-Glass Floor Below",
+        accent: "amber",
+        position: [-4.8, -3.4, -8.8],
+        onTrigger: () => onSelectWaypoint("lounge-pit-west"),
+      },
+      {
+        id: "lounge-pit-east",
+        label: "East Sunken Glass Lounge",
+        sublabel: "Earth-Glass Floor Below",
+        accent: "amber",
+        position: [4.8, -3.4, -8.8],
+        onTrigger: () => onSelectWaypoint("lounge-pit-east"),
+      },
+      {
+        id: "atrium-commons",
+        label: "← Return to Grand Atrium",
+        sublabel: "Central Hub",
+        accent: "teal",
+        position: [0.0, -3.8, -8.8],
+        onTrigger: () => onSelectWaypoint("atrium-commons"),
+      },
+    ];
+  }, [
+    activeStageId,
+    activeIdea,
+    sectorIdeaMap,
+    onSelectWaypoint,
+    onOpenIdeaDrawer,
+    onOpenLevlDrawer,
+    onOpenScreeningModal,
+    onOpenMatchingDrawer,
+    onOpenConciergeDrawer,
+  ]);
 
   return (
     <group>
-      {/* =================================================================== */}
-      {/* A. SHARED ORBITAL ATRIUM                                            */}
-      {/* =================================================================== */}
-      <mesh
-        geometry={atriumDeckGeometry}
-        position={[0, 0, 0]}
-        rotation={[-Math.PI / 2, 0, 0]}
-      >
-        <meshStandardMaterial
-          color="#cfc3b2"
-          roughness={0.32}
-          metalness={0.22}
-          side={THREE.DoubleSide}
-        />
-      </mesh>
-
-      {/* Sculptural Branching Ivory Structural Ribs */}
-      {[-12, -6, 0, 6, 12].map((xOffset, idx) => (
-        <group key={idx} position={[xOffset, 0, -6]}>
-          <mesh rotation={[0.18, 0, (xOffset / 18) * -0.25]} position={[0, 6.8, -5]}>
-            <torusGeometry args={[12.5, 0.34, 16, 64, Math.PI]} />
-            <meshStandardMaterial
-              color="#efe6d8"
-              roughness={0.28}
-              metalness={0.22}
-            />
-          </mesh>
-          {/* Warm Cove Light Along Each Rib */}
-          <mesh rotation={[0.18, 0, (xOffset / 18) * -0.25]} position={[0, 6.72, -4.9]}>
-            <torusGeometry args={[12.22, 0.05, 8, 64, Math.PI]} />
-            <meshBasicMaterial color="#fde68a" />
-          </mesh>
-        </group>
-      ))}
-
-      {/* Overhead "HYPERABUNDANCE" Illuminated Arch */}
-      <group position={[0, 10.6, -15.5]}>
-        <Text
-          fontSize={0.78}
-          letterSpacing={0.32}
-          color="#fef3c7"
-          anchorX="center"
-          anchorY="middle"
-        >
-          H Y P E R A B U N D A N C E
-        </Text>
-      </group>
-
-      {/* Central Botanical Garden Island */}
-      <group position={[0, 0, -7.8]}>
-        <mesh position={[0, 0.28, 0]}>
-          <cylinderGeometry args={[2.6, 2.8, 0.56, 36]} />
-          <meshStandardMaterial color="#b49a78" roughness={0.4} metalness={0.3} />
-        </mesh>
-        <mesh position={[0, 1.6, 0]}>
-          <cylinderGeometry args={[0.18, 0.28, 2.4, 12]} />
-          <meshStandardMaterial color="#5c4033" roughness={0.85} />
-        </mesh>
-        <mesh position={[0, 3.1, 0]}>
-          <sphereGeometry args={[1.65, 16, 16]} />
-          <meshStandardMaterial color="#15803d" roughness={0.8} />
-        </mesh>
-        <mesh position={[-0.95, 2.5, 0.4]}>
-          <sphereGeometry args={[1.1, 14, 14]} />
-          <meshStandardMaterial color="#166534" roughness={0.85} />
-        </mesh>
-        <mesh position={[0.95, 2.6, -0.3]}>
-          <sphereGeometry args={[1.15, 14, 14]} />
-          <meshStandardMaterial color="#14532d" roughness={0.85} />
-        </mesh>
-      </group>
-
-      {/* Concierge & Station Briefing Holographic Kiosk */}
-      <group
-        position={[0, 0, 0.5]}
-        onClick={(e) => {
-          e.stopPropagation();
-          onOpenConciergeDrawer();
-        }}
-      >
-        <mesh position={[0, 0.6, 0]}>
-          <cylinderGeometry args={[0.7, 0.85, 1.2, 32]} />
-          <meshStandardMaterial color="#e5dac9" roughness={0.3} metalness={0.3} />
-        </mesh>
-        {/* Holographic AI Resident Concierge Avatar (Persistently Badged as AI) */}
-        <mesh position={[0, 1.65, 0]}>
-          <capsuleGeometry args={[0.22, 0.65, 12, 24]} />
-          <meshBasicMaterial color="#38bdf8" wireframe transparent opacity={0.75} />
-        </mesh>
-        <Html position={[0, 2.5, 0]} center distanceFactor={12} zIndexRange={[10, 0]}>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onOpenConciergeDrawer();
-            }}
-            className="cursor-pointer rounded-xl border border-sky-400/50 bg-slate-950/85 px-3 py-1.5 text-left shadow-lg backdrop-blur-md transition hover:border-sky-300"
-          >
-            <div className="text-[9px] font-bold tracking-wider text-sky-300 uppercase">
-              AI RESIDENT • CONCIERGE
-            </div>
-            <div className="text-xs font-semibold whitespace-nowrap text-white">
-              Aethel & Station Briefing
-            </div>
-          </button>
-        </Html>
-      </group>
-
-      {/* 2 Sunken Glass-Bottom Lounge Pits */}
-      <SunkenGlassFloorLoungePit
-        position={[-5.8, 0, -5.5]}
-        label="West Sunken Lounge"
-        onSelect={() => onSelectWaypoint("lounge-pit-west")}
-      />
-      <SunkenGlassFloorLoungePit
-        position={[5.8, 0, -5.5]}
-        label="East Sunken Lounge"
-        onSelect={() => onSelectWaypoint("lounge-pit-east")}
-      />
-
-      {/* 6 Outward-Protruding Earthview Bubble Pods */}
-      {focusPods.map((pod) => (
-        <OutwardEarthviewBubblePod
-          key={pod.id}
-          waypoint={pod}
-          isCurrent={activeWaypointId === pod.id}
-          onSelect={() => onSelectWaypoint(pod.id)}
-        />
-      ))}
-
-      {/* Upper Botanical Conservatory & Library Mezzanine */}
-      <group position={[0, 5.8, 6.2]}>
-        <mesh rotation={[-Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[2.5, 6.5, 48, 1, 0, Math.PI]} />
-          <meshStandardMaterial
-            color="#e7dccb"
-            roughness={0.35}
-            side={THREE.DoubleSide}
-          />
-        </mesh>
-        <Html position={[0, 1.5, -1.5]} center distanceFactor={15} zIndexRange={[10, 0]}>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onSelectWaypoint("conservatory-deck");
-            }}
-            className="cursor-pointer rounded-full border border-emerald-300/45 bg-slate-950/85 px-3 py-1 text-[11px] font-medium whitespace-nowrap text-emerald-100 shadow-lg backdrop-blur-md hover:border-emerald-300"
-          >
-            ↑ Botanical Library & Conservatory (+22 ft)
-          </button>
-        </Html>
-      </group>
-
-      {/* Exact Supplied Brand Logos on Left & Right Wing Portals */}
-      <BrandPortalSignage onSelectWaypoint={onSelectWaypoint} />
-
-      {/* =================================================================== */}
-      {/* B. LEVL LONGEVITY LOUNGE & SPA WING (West Wing: x ≈ -28)            */}
-      {/* =================================================================== */}
-      <group position={[-28, 0, -6]}>
-        {/* Ivory Travertine Floor with Sunken Glass-Floor Cutout */}
-        <mesh position={[0, -0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <circleGeometry args={[13.5, 64]} />
-          <meshStandardMaterial color="#ede6d9" roughness={0.28} metalness={0.12} />
-        </mesh>
-
-        {/* LEVL Sunken Glass-Floor Conversation Pit */}
-        <SunkenGlassFloorLoungePit
-          position={[1.8, 0.02, 1.2]}
-          label="LEVL Earth-Glass Lounge"
-          onSelect={() => onSelectWaypoint("levl-lounge-entry")}
-        />
-
-        {/* Backlit Fluted Alabaster Protocol Bar + AI Bartender (Sora) */}
-        <group
-          position={[-5.2, 0, 1.5]}
-          onClick={(e) => {
-            e.stopPropagation();
-            onSelectWaypoint("levl-protocol-bar");
-            onOpenLevlDrawer();
-          }}
-        >
-          <mesh position={[0, 0.62, 0]}>
-            <boxGeometry args={[1.6, 1.24, 6.4]} />
-            <meshStandardMaterial
-              color="#f8f4ec"
-              roughness={0.25}
-              emissive="#fde68a"
-              emissiveIntensity={0.35}
-            />
-          </mesh>
-          {/* Holographic LEVL Bartender Avatar (Sora) */}
-          <mesh position={[-1.1, 1.65, 0]}>
-            <capsuleGeometry args={[0.24, 0.72, 12, 24]} />
-            <meshBasicMaterial color="#2dd4bf" wireframe transparent opacity={0.8} />
-          </mesh>
-          <Html position={[-0.6, 2.55, 0]} center distanceFactor={11} zIndexRange={[10, 0]}>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onSelectWaypoint("levl-protocol-bar");
-                onOpenLevlDrawer();
-              }}
-              className="cursor-pointer rounded-xl border border-teal-400/50 bg-slate-950/90 px-3 py-1.5 text-left shadow-lg backdrop-blur-md transition hover:border-teal-300"
-            >
-              <div className="text-[9px] font-bold tracking-wider text-teal-300 uppercase">
-                AI RESIDENT • LEVL COACH & BUILDER
-              </div>
-              <div className="text-xs font-bold whitespace-nowrap text-white">
-                Sora • LEVL Protocol Bartender
-              </div>
-              <div className="text-[10px] text-teal-200/80">
-                Ask sourced PubMed questions & draft protocols
-              </div>
-            </button>
-          </Html>
-        </group>
-
-        {/* LEVL Research Screening Wall (Prerecorded Screening — Separate from Ambient Audio) */}
-        <group
-          position={[-0.5, 2.8, -9.2]}
-          onClick={(e) => {
-            e.stopPropagation();
-            onSelectWaypoint("levl-screening-wall");
-            onOpenScreeningModal();
-          }}
-        >
-          <mesh>
-            <boxGeometry args={[6.4, 3.4, 0.18]} />
-            <meshStandardMaterial
-              color="#081c24"
-              emissive="#0f766e"
-              emissiveIntensity={0.35}
-            />
-          </mesh>
-          <Text position={[-1.4, 0.6, 0.12]} fontSize={0.28} color="#f0fdfa">
-            Living Longer • Living Better
-          </Text>
-          <Text position={[-1.4, 0.1, 0.12]} fontSize={0.16} color="#5eead4">
-            LEVL Research Screening Wall (Click to Watch / Browse Playlist)
-          </Text>
-          <Html position={[0, -1.2, 0.2]} center distanceFactor={12} zIndexRange={[10, 0]}>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onSelectWaypoint("levl-screening-wall");
-                onOpenScreeningModal();
-              }}
-              className="cursor-pointer rounded-full border border-teal-300/60 bg-teal-950/90 px-3.5 py-1 text-xs font-semibold whitespace-nowrap text-teal-100 shadow-lg hover:bg-teal-900"
-            >
-              ▶ Open Research Screening Player
-            </button>
-          </Html>
-        </group>
-
-        {/* Spa Modality Stations: Finnish Sauna, Cold Plunge, HBOT & Red Light */}
-        <group
-          position={[-8.8, 0, -5.5]}
-          onClick={(e) => {
-            e.stopPropagation();
-            onSelectWaypoint("levl-spa-sauna");
-            onOpenLevlDrawer("finnish-sauna");
-          }}
-        >
-          {/* Cedar Finnish Sauna Cabin */}
-          <mesh position={[0, 1.3, 0]}>
-            <boxGeometry args={[2.8, 2.6, 2.8]} />
-            <meshStandardMaterial
-              color="#9a5b32"
-              roughness={0.45}
-              emissive="#ea580c"
-              emissiveIntensity={0.25}
-            />
-          </mesh>
-          {/* Cold Plunge Basin */}
-          <mesh position={[2.6, 0.45, 0.4]}>
-            <cylinderGeometry args={[1.1, 1.0, 0.9, 32]} />
-            <meshStandardMaterial
-              color="#0284c7"
-              emissive="#38bdf8"
-              emissiveIntensity={0.45}
-            />
-          </mesh>
-          <Html position={[0.8, 2.8, 0]} center distanceFactor={13} zIndexRange={[10, 0]}>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onSelectWaypoint("levl-spa-sauna");
-                onOpenLevlDrawer("finnish-sauna");
-              }}
-              className="cursor-pointer rounded-full border border-amber-300/50 bg-slate-950/85 px-3 py-1 text-[11px] font-medium whitespace-nowrap text-amber-100 shadow-lg"
-            >
-              ♨ Sauna (80°C) & Cold Plunge (12°C) Evidence
-            </button>
-          </Html>
-        </group>
-
-        {/* HBOT Chamber & Red Light Panel */}
-        <group
-          position={[6.2, 0, -6.8]}
-          onClick={(e) => {
-            e.stopPropagation();
-            onSelectWaypoint("levl-spa-hbot");
-            onOpenLevlDrawer("hyperbaric-oxygen-therapy");
-          }}
-        >
-          <mesh position={[0, 1.1, 0]} rotation={[0, 0, Math.PI / 2]}>
-            <capsuleGeometry args={[0.95, 2.2, 16, 32]} />
-            <meshStandardMaterial
-              color="#e2e8f0"
-              metalness={0.5}
-              roughness={0.2}
-              emissive="#38bdf8"
-              emissiveIntensity={0.2}
-            />
-          </mesh>
-          <Html position={[0, 2.4, 0]} center distanceFactor={13} zIndexRange={[10, 0]}>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onSelectWaypoint("levl-spa-hbot");
-                onOpenLevlDrawer("hyperbaric-oxygen-therapy");
-              }}
-              className="cursor-pointer rounded-full border border-sky-300/50 bg-slate-950/85 px-3 py-1 text-[11px] font-medium whitespace-nowrap text-sky-100 shadow-lg"
-            >
-              ⊕ 2.0 ATA HBOT & 660nm Red Light Station
-            </button>
-          </Html>
-        </group>
-      </group>
-
-      {/* =================================================================== */}
-      {/* C. AGI FUTURES INVENTOR'S CLUB WING (East Wing: x ≈ +28)            */}
-      {/* =================================================================== */}
-      <group position={[28, 0, -6]}>
-        {/* Warm Walnut & Graphite Club Floor */}
-        <mesh position={[0, -0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <circleGeometry args={[13.5, 64]} />
-          <meshStandardMaterial color="#1c1917" roughness={0.35} metalness={0.25} />
-        </mesh>
-
-        {/* 1. Central Collaborative Holographic Table */}
-        <group position={[0, 0, -0.5]}>
-          <mesh position={[0, 0.45, 0]}>
-            <cylinderGeometry args={[2.65, 2.2, 0.9, 48]} />
-            <meshStandardMaterial
-              color="#452c1e"
-              roughness={0.32}
-              metalness={0.35}
-            />
-          </mesh>
-          <IdeaHologram
-            idea={activeIdea}
-            position={[0, 1.45, 0]}
-            scale={1.25}
-            reducedMotion={reducedMotion}
-            onSelect={() => {
-              onSelectWaypoint("agi-holo-table");
-              onOpenIdeaDrawer(activeIdea);
-            }}
-          />
-        </group>
-
-        {/* 2. Recessed Swipable Sector Idea Booths Around the Club Perimeter */}
-        {SECTOR_BOOTHS.map((booth, idx) => {
-          const angle = -0.55 + idx * 0.48;
-          const radius = 8.6;
-          const bx = Math.cos(angle) * radius;
-          const bz = Math.sin(angle) * radius - 1.0;
-          const currentSectorIdea =
-            sectorIdeaMap[booth.id] || AGI_FUTURES_IDEAS[idx];
-
-          return (
-            <group
-              key={booth.id}
-              position={[bx, 0, bz]}
-              rotation={[0, -angle - Math.PI / 2, 0]}
-            >
-              {/* Recessed Walnut & Brushed Copper Booth Alcove */}
-              <mesh position={[0, 1.85, -0.8]}>
-                <boxGeometry args={[3.4, 3.7, 0.25]} />
-                <meshStandardMaterial
-                  color="#27272a"
-                  metalness={0.5}
-                  roughness={0.35}
-                  emissive={booth.accentHex}
-                  emissiveIntensity={0.12}
-                />
-              </mesh>
-              <Text
-                position={[0, 3.25, -0.62]}
-                fontSize={0.17}
-                color={booth.accentHex}
-                anchorX="center"
-              >
-                {booth.boothSignage}
-              </Text>
-              <IdeaHologram
-                idea={currentSectorIdea}
-                position={[0, 1.35, 0.1]}
-                scale={0.95}
-                reducedMotion={reducedMotion}
-                onSelect={() => onOpenIdeaDrawer(currentSectorIdea)}
-              />
-            </group>
-          );
-        })}
-
-        {/* 3. AI Builder Guide Desk (Kaelen) */}
-        <group
-          position={[-6.5, 0, 2.0]}
-          onClick={(e) => {
-            e.stopPropagation();
-            onSelectWaypoint("agi-builder-guide");
+      {/* In AGI Futures Club, project the live 3D rotating hologram over the central table */}
+      {activeStageId === "agifutures-club" && (
+        <IdeaHologram
+          idea={activeIdea}
+          position={[-0.15, -1.35, -8.2]}
+          scale={0.95}
+          reducedMotion={reducedMotion}
+          onSelect={() => {
+            onSelectWaypoint("agi-holo-table");
             onOpenIdeaDrawer(activeIdea);
           }}
-        >
-          <mesh position={[0, 0.55, 0]}>
-            <cylinderGeometry args={[1.2, 1.3, 1.1, 32]} />
-            <meshStandardMaterial color="#3f2e21" roughness={0.35} />
-          </mesh>
-          <mesh position={[0, 1.65, 0]}>
-            <capsuleGeometry args={[0.22, 0.68, 12, 24]} />
-            <meshBasicMaterial color="#34d399" wireframe transparent opacity={0.8} />
-          </mesh>
-          <Html position={[0, 2.55, 0]} center distanceFactor={11} zIndexRange={[10, 0]}>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onSelectWaypoint("agi-builder-guide");
-                onOpenIdeaDrawer(activeIdea);
-              }}
-              className="cursor-pointer rounded-xl border border-emerald-400/50 bg-slate-950/90 px-3 py-1.5 text-left shadow-lg backdrop-blur-md hover:border-emerald-300"
-            >
-              <div className="text-[9px] font-bold tracking-wider text-emerald-300 uppercase">
-                AI RESIDENT • AGI FUTURES
-              </div>
-              <div className="text-xs font-bold whitespace-nowrap text-white">
-                Kaelen • AI Builder Guide
-              </div>
-              <div className="text-[10px] text-emerald-200/80">
-                Assumptions, 14-day experiments & matching
-              </div>
-            </button>
-          </Html>
-        </group>
+        />
+      )}
 
-        {/* 4. Founder Matching Wall (Building / Looking For / Can Help) */}
-        <group
-          position={[-7.5, 2.2, -1.8]}
-          rotation={[0, Math.PI / 2, 0]}
-          onClick={(e) => {
-            e.stopPropagation();
-            onSelectWaypoint("agi-matching-wall");
-            onOpenMatchingDrawer();
-          }}
-        >
-          <mesh>
-            <boxGeometry args={[4.6, 2.9, 0.16]} />
-            <meshStandardMaterial
-              color="#18181b"
-              metalness={0.6}
-              roughness={0.3}
-              emissive="#10b981"
-              emissiveIntensity={0.18}
-            />
-          </mesh>
-          <Text position={[0, 1.05, 0.1]} fontSize={0.22} color="#fef3c7">
-            FOUNDER MATCHING
-          </Text>
-          <Text position={[0, 0.72, 0.1]} fontSize={0.13} color="#6ee7b7">
-            BUILDING  •  LOOKING FOR  •  CAN HELP WITH
-          </Text>
-          <Html position={[0, -0.35, 0.15]} center distanceFactor={12} zIndexRange={[10, 0]}>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onSelectWaypoint("agi-matching-wall");
-                onOpenMatchingDrawer();
-              }}
-              className="cursor-pointer rounded-full border border-emerald-400/60 bg-emerald-950/90 px-3.5 py-1 text-xs font-semibold whitespace-nowrap text-emerald-100 shadow-lg hover:bg-emerald-900"
-            >
-              ⇄ Open Builder Matching & Banners
-            </button>
-          </Html>
-        </group>
-      </group>
-
-      {/* =================================================================== */}
-      {/* D. HONEST DIRECTORY MEMBER BANNERS AT DISCRETE DESTINATIONS         */}
-      {/* =================================================================== */}
-      {INITIAL_MEMBER_BANNERS.map((member, idx) => {
-        const wp = getWaypointById(member.currentDestination);
-        const offsetAngle = idx * 1.4;
-        const pos: [number, number, number] = [
-          wp.markerPos[0] + Math.cos(offsetAngle) * 1.3,
-          wp.markerPos[1] + 0.5,
-          wp.markerPos[2] + Math.sin(offsetAngle) * 1.3,
-        ];
-        return (
-          <group key={member.id} position={pos}>
-            <mesh position={[0, 0.4, 0]}>
-              <capsuleGeometry args={[0.18, 0.55, 8, 16]} />
-              <meshStandardMaterial
-                color={member.avatarColor}
-                roughness={0.35}
-                metalness={0.2}
-              />
-            </mesh>
-            <Html position={[0, 1.15, 0]} center distanceFactor={14} zIndexRange={[10, 0]}>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onOpenMatchingDrawer();
-                }}
-                className="cursor-pointer rounded-lg border border-white/20 bg-slate-950/80 px-2.5 py-1 text-left shadow backdrop-blur-md hover:border-white/40"
-              >
-                <div className="flex items-center gap-1.5">
-                  <span
-                    className={`h-1.5 w-1.5 rounded-full ${
-                      member.presenceStatus === "focus"
-                        ? "bg-amber-400"
-                        : "bg-emerald-400"
-                    }`}
-                  />
-                  <span className="text-[10px] font-semibold whitespace-nowrap text-white">
-                    {member.displayName}
-                  </span>
-                  <span className="text-[9px] text-slate-400">
-                    ({member.roleTag})
-                  </span>
-                </div>
-              </button>
-            </Html>
-          </group>
-        );
-      })}
+      {/* Room-Scoped Spatial Beacons */}
+      {showBeacons &&
+        beacons.map((b) => (
+          <SpatialHotspotBeacon
+            key={b.id}
+            beacon={b}
+            isActive={activeWaypointId === b.id}
+            reducedMotion={reducedMotion}
+          />
+        ))}
     </group>
   );
 }
 
 // ============================================================================
-// 6. FIRST-PERSON NON-LOCKING CAMERA RIG (Spline Drift + Look + Optional WASD)
+// 6. FIRST-PERSON NON-LOCKING CAMERA RIG (Spline Drift + Parallax + Zoom + WASD)
 // ============================================================================
 function FirstPersonDriftRig({
   activeWaypointId,
   reducedMotion,
+  pointerRef,
 }: {
   activeWaypointId: string;
   reducedMotion: boolean;
+  pointerRef: React.MutableRefObject<{ x: number; y: number }>;
 }) {
   const { camera, gl } = useThree();
-  const targetPos = useRef(new THREE.Vector3(0, 2.5, 11.5));
-  const currentLookAt = useRef(new THREE.Vector3(0, 2.2, -28));
-  const targetLookAt = useRef(new THREE.Vector3(0, 2.2, -28));
+  const targetPos = useRef(new THREE.Vector3(0, 0.35, 9.2));
+  const currentLookAt = useRef(new THREE.Vector3(0, 0.25, -12.0));
+  const targetLookAt = useRef(new THREE.Vector3(0, 0.25, -12.0));
 
   const yawOffset = useRef(0);
   const pitchOffset = useRef(0);
+  const zoomOffset = useRef(0);
   const isDragging = useRef(false);
   const lastMouse = useRef({ x: 0, y: 0 });
   const keysPressed = useRef<Set<string>>(new Set());
@@ -1153,6 +856,7 @@ function FirstPersonDriftRig({
     targetLookAt.current.set(...wp.lookAt);
     yawOffset.current = 0;
     pitchOffset.current = 0;
+    zoomOffset.current = 0;
 
     if (reducedMotion) {
       camera.position.copy(targetPos.current);
@@ -1163,24 +867,42 @@ function FirstPersonDriftRig({
 
   useEffect(() => {
     const dom = gl.domElement;
+
     const onPointerDown = (e: PointerEvent) => {
       if (e.button !== 0) return;
       isDragging.current = true;
       lastMouse.current = { x: e.clientX, y: e.clientY };
     };
+
     const onPointerMove = (e: PointerEvent) => {
+      // Normalized pointer coordinates (-1..1) for real-time 3D depth parallax
+      const nx = (e.clientX / window.innerWidth) * 2 - 1;
+      const ny = -((e.clientY / window.innerHeight) * 2 - 1);
+      pointerRef.current = { x: nx, y: ny };
+
       if (!isDragging.current) return;
       const dx = e.clientX - lastMouse.current.x;
       const dy = e.clientY - lastMouse.current.y;
       lastMouse.current = { x: e.clientX, y: e.clientY };
-      yawOffset.current -= dx * 0.0032;
+      yawOffset.current = Math.max(
+        -0.42,
+        Math.min(0.42, yawOffset.current - dx * 0.0024)
+      );
       pitchOffset.current = Math.max(
-        -0.65,
-        Math.min(0.65, pitchOffset.current - dy * 0.0028)
+        -0.28,
+        Math.min(0.28, pitchOffset.current - dy * 0.002)
       );
     };
+
     const onPointerUp = () => {
       isDragging.current = false;
+    };
+
+    const onWheel = (e: WheelEvent) => {
+      zoomOffset.current = Math.max(
+        -3.8,
+        Math.min(2.2, zoomOffset.current + e.deltaY * 0.004)
+      );
     };
 
     const onKeyDown = (e: KeyboardEvent) => {
@@ -1188,6 +910,7 @@ function FirstPersonDriftRig({
       if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
       keysPressed.current.add(e.key.toLowerCase());
     };
+
     const onKeyUp = (e: KeyboardEvent) => {
       keysPressed.current.delete(e.key.toLowerCase());
     };
@@ -1195,6 +918,7 @@ function FirstPersonDriftRig({
     dom.addEventListener("pointerdown", onPointerDown);
     window.addEventListener("pointermove", onPointerMove);
     window.addEventListener("pointerup", onPointerUp);
+    dom.addEventListener("wheel", onWheel, { passive: true });
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup", onKeyUp);
 
@@ -1202,46 +926,50 @@ function FirstPersonDriftRig({
       dom.removeEventListener("pointerdown", onPointerDown);
       window.removeEventListener("pointermove", onPointerMove);
       window.removeEventListener("pointerup", onPointerUp);
+      dom.removeEventListener("wheel", onWheel);
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
     };
-  }, [gl]);
+  }, [gl, pointerRef]);
 
-  useFrame((_, delta) => {
+  useFrame((state, delta) => {
     if (document.hidden) return;
     const dt = Math.min(delta, 0.1);
 
-    // Optional WASD / Arrow-Key Free Float
-    const moveSpeed = 7.5 * dt;
-    const forward = new THREE.Vector3();
-    camera.getWorldDirection(forward);
-    forward.y = 0;
-    forward.normalize();
-    const right = new THREE.Vector3().crossVectors(forward, camera.up).normalize();
-
+    // Optional WASD / Arrow-Key Free Float within stage bounds
+    const moveSpeed = 3.2 * dt;
     if (keysPressed.current.has("w") || keysPressed.current.has("arrowup")) {
-      targetPos.current.addScaledVector(forward, moveSpeed);
-      targetLookAt.current.addScaledVector(forward, moveSpeed);
+      zoomOffset.current = Math.max(-3.8, zoomOffset.current - moveSpeed);
     }
     if (keysPressed.current.has("s") || keysPressed.current.has("arrowdown")) {
-      targetPos.current.addScaledVector(forward, -moveSpeed);
-      targetLookAt.current.addScaledVector(forward, -moveSpeed);
+      zoomOffset.current = Math.min(2.2, zoomOffset.current + moveSpeed);
     }
     if (keysPressed.current.has("a") || keysPressed.current.has("arrowleft")) {
-      targetPos.current.addScaledVector(right, -moveSpeed);
-      targetLookAt.current.addScaledVector(right, -moveSpeed);
+      yawOffset.current = Math.max(-0.42, yawOffset.current + moveSpeed * 0.25);
     }
     if (keysPressed.current.has("d") || keysPressed.current.has("arrowright")) {
-      targetPos.current.addScaledVector(right, moveSpeed);
-      targetLookAt.current.addScaledVector(right, moveSpeed);
+      yawOffset.current = Math.min(0.42, yawOffset.current - moveSpeed * 0.25);
     }
 
-    // Smooth spline-like zero-G drift toward target waypoint
-    const lerpFactor = reducedMotion ? 1 : 1 - Math.exp(-3.2 * dt);
-    camera.position.lerp(targetPos.current, lerpFactor);
+    // Subtle zero-G breathing float + mouse parallax sway
+    const t = state.clock.elapsedTime;
+    const breathX = reducedMotion
+      ? 0
+      : Math.sin(t * 0.45) * 0.12 + pointerRef.current.x * 0.48;
+    const breathY = reducedMotion
+      ? 0
+      : Math.cos(t * 0.35) * 0.08 + pointerRef.current.y * 0.32;
+
+    const desiredPos = new THREE.Vector3(
+      targetPos.current.x + breathX,
+      targetPos.current.y + breathY,
+      targetPos.current.z + zoomOffset.current
+    );
+
+    const lerpFactor = reducedMotion ? 1 : 1 - Math.exp(-3.4 * dt);
+    camera.position.lerp(desiredPos, lerpFactor);
     currentLookAt.current.lerp(targetLookAt.current, lerpFactor);
 
-    // Apply user drag-to-look offsets around current lookAt vector
     const baseDir = new THREE.Vector3()
       .subVectors(currentLookAt.current, camera.position)
       .normalize();
@@ -1258,10 +986,12 @@ function FirstPersonDriftRig({
 }
 
 // ============================================================================
-// 7. MAIN EXPORTED ORBITAL CANVAS
+// 7. MAIN EXPORTED PHOTOREALISTIC ORBITAL CANVAS
 // ============================================================================
 export function OrbitalCanvas(props: OrbitalCanvasProps) {
   const [isTabVisible, setIsTabVisible] = useState(true);
+  const [showBeacons, setShowBeacons] = useState(true);
+  const pointerRef = useRef({ x: 0, y: 0 });
 
   useEffect(() => {
     const onVisChange = () => setIsTabVisible(!document.hidden);
@@ -1269,63 +999,75 @@ export function OrbitalCanvas(props: OrbitalCanvasProps) {
     return () => document.removeEventListener("visibilitychange", onVisChange);
   }, []);
 
+  const activeWaypoint = useMemo(
+    () => getWaypointById(props.activeWaypointId),
+    [props.activeWaypointId]
+  );
+
+  const activeStageId = activeWaypoint.stageId;
+
   const dpr: [number, number] =
     props.qualityTier === "high"
-      ? [1, 2]
+      ? [1.25, 2]
       : props.qualityTier === "balanced"
       ? [1, 1.5]
-      : [0.85, 1];
+      : [1, 1];
 
   return (
     <div
       className="relative h-full w-full bg-[#030712]"
-      aria-label="Interactive 3D Orbital Habitat View. Drag to look around, click any pod, lounge, or holographic booth to drift there, or use the top navigation bar and 2D Directory."
+      aria-label="Interactive Photorealistic 3D Orbital Habitat View. Move cursor or drag to look around in 3D, scroll to zoom into any pod or lounge, or click any glowing spatial beacon."
     >
       <Canvas
         dpr={dpr}
         frameloop={isTabVisible ? "always" : "never"}
-        camera={{ position: [0, 2.5, 11.5], fov: 56, near: 0.1, far: 600 }}
+        gl={{
+          antialias: true,
+          powerPreference: "high-performance",
+          toneMapping: THREE.NoToneMapping,
+        }}
+        camera={{ position: [0, 0.35, 9.2], fov: 50, near: 0.1, far: 200 }}
       >
-        <color attach="background" args={["#030816"]} />
-        <fog attach="fog" args={["#040b1c", 45, 290]} />
+        <color attach="background" args={["#020611"]} />
 
-        {/* Warm Architectural Interior Lighting + Cool Earthshine Uplight */}
-        <ambientLight intensity={0.68} color="#f8fafc" />
-        <directionalLight
-          position={[18, 28, 12]}
-          intensity={1.35}
-          color="#fffbeb"
-        />
-        <directionalLight
-          position={[0, -35, -45]}
-          intensity={1.15}
-          color="#38bdf8"
-        />
-        <pointLight position={[0, 7.5, -6]} intensity={1.1} color="#fde68a" distance={36} />
-        <pointLight position={[-28, 5, -6]} intensity={1.0} color="#5eead4" distance={28} />
-        <pointLight position={[28, 5, -6]} intensity={1.0} color="#34d399" distance={28} />
+        <ambientLight intensity={1.1} color="#fffbeb" />
+        <pointLight position={[0, 4, 2]} intensity={1.4} color="#fde68a" distance={28} />
 
-        {/* Secondary Starfield (Subtle per Section 4: Earth is primary, stars secondary) */}
-        <Stars
-          radius={210}
-          depth={60}
-          count={props.qualityTier === "lightweight" ? 700 : 1800}
-          factor={2.6}
-          saturation={0.1}
-          fade
-          speed={props.reducedMotion ? 0 : 0.25}
-        />
+        {/* Zero-G Biophilic Golden & Cyan Atmospheric Light Motes */}
+        {!props.reducedMotion && (
+          <>
+            <Sparkles
+              count={props.qualityTier === "lightweight" ? 35 : 90}
+              scale={[24, 13, 12]}
+              position={[0, 0, -4]}
+              size={1.6}
+              speed={0.22}
+              opacity={0.45}
+              color="#fde68a"
+            />
+            <Sparkles
+              count={props.qualityTier === "lightweight" ? 20 : 55}
+              scale={[22, 11, 10]}
+              position={[0, -2, -5]}
+              size={1.4}
+              speed={0.18}
+              opacity={0.38}
+              color="#38bdf8"
+            />
+          </>
+        )}
 
-        {/* Monumental Realistic Earth Below & Ahead */}
-        <EarthBelow
-          isFocusMode={props.isFocusMode}
-          reducedMotion={props.reducedMotion}
-          qualityTier={props.qualityTier}
-        />
-
-        {/* Shared Atrium, Outward Pods, Glass-Floor Lounges, LEVL & AGI Futures Wings */}
+        {/* Photorealistic 3D Curved Depth-Displaced Architectural Stage */}
         <React.Suspense fallback={null}>
-          <StationArchitecture
+          <PhotorealCurvedStage
+            activeStageId={activeStageId}
+            isFocusMode={props.isFocusMode}
+            reducedMotion={props.reducedMotion}
+            pointerRef={pointerRef}
+          />
+
+          <StageInteractiveOverlays
+            activeStageId={activeStageId}
             activeWaypointId={props.activeWaypointId}
             onSelectWaypoint={props.onSelectWaypoint}
             activeIdea={props.activeIdea}
@@ -1336,15 +1078,88 @@ export function OrbitalCanvas(props: OrbitalCanvasProps) {
             onOpenMatchingDrawer={props.onOpenMatchingDrawer}
             onOpenConciergeDrawer={props.onOpenConciergeDrawer}
             reducedMotion={props.reducedMotion}
+            showBeacons={showBeacons}
           />
         </React.Suspense>
 
-        {/* Non-Locking First-Person Camera Controller */}
+        {/* Non-Locking First-Person Camera Rig */}
         <FirstPersonDriftRig
           activeWaypointId={props.activeWaypointId}
           reducedMotion={props.reducedMotion}
+          pointerRef={pointerRef}
         />
       </Canvas>
+
+      {/* Floating Spatial Stage Switcher & Cinema View Toggle (Bottom-Left Above DJ Bar) */}
+      <div className="pointer-events-auto fixed bottom-20 left-4 z-20 flex flex-wrap items-center gap-1.5 rounded-2xl border border-white/15 bg-slate-950/75 p-1.5 shadow-2xl backdrop-blur-xl">
+        <span className="hidden items-center gap-1 px-2 text-[10px] font-semibold tracking-wider text-sky-300 uppercase sm:inline-flex">
+          <Compass className="h-3 w-3" />
+          3D Vista:
+        </span>
+        {STAGE_LABELS.map((st) => {
+          const isCurrent = activeStageId === st.id;
+          return (
+            <button
+              key={st.id}
+              type="button"
+              onClick={() => props.onSelectWaypoint(st.defaultWaypointId)}
+              className={`cursor-pointer rounded-xl px-2.5 py-1 text-[11px] font-medium transition ${
+                isCurrent
+                  ? "bg-sky-500/25 text-sky-100 border border-sky-400/50 shadow-sm"
+                  : "text-slate-300 hover:bg-white/10 hover:text-white"
+              }`}
+            >
+              {st.label}
+            </button>
+          );
+        })}
+
+        <div className="mx-0.5 h-4 w-px bg-white/15" />
+
+        <button
+          type="button"
+          onClick={() => setShowBeacons((prev) => !prev)}
+          title={showBeacons ? "Hide 3D spatial pins for unobstructed cinema view" : "Show interactive 3D spatial pins"}
+          className={`inline-flex cursor-pointer items-center gap-1.5 rounded-xl border px-2.5 py-1 text-[11px] font-medium transition ${
+            showBeacons
+              ? "border-white/15 bg-white/5 text-slate-200 hover:bg-white/10"
+              : "border-amber-400/50 bg-amber-500/20 text-amber-100"
+          }`}
+        >
+          {showBeacons ? (
+            <>
+              <EyeOff className="h-3 w-3 text-slate-300" />
+              <span className="hidden md:inline">Clean View</span>
+            </>
+          ) : (
+            <>
+              <Eye className="h-3 w-3 text-amber-300" />
+              <span className="hidden md:inline">Show Pins</span>
+            </>
+          )}
+        </button>
+
+        {activeWaypoint.kind !== "overview" && (
+          <button
+            type="button"
+            onClick={() => {
+              const parentOverview =
+                activeStageId === "levl-lounge"
+                  ? "levl-lounge-entry"
+                  : activeStageId === "agifutures-club"
+                  ? "agi-club-overview"
+                  : activeStageId === "atrium-terrace"
+                  ? "atrium-concierge"
+                  : "atrium-commons";
+              props.onSelectWaypoint(parentOverview);
+            }}
+            className="inline-flex cursor-pointer items-center gap-1 rounded-xl border border-sky-400/40 bg-sky-500/15 px-2.5 py-1 text-[11px] font-medium text-sky-200 hover:bg-sky-500/25"
+          >
+            <RotateCcw className="h-3 w-3" />
+            Reset Camera
+          </button>
+        )}
+      </div>
     </div>
   );
 }

@@ -65,9 +65,10 @@ export function AtriumExperienceClient() {
   // 1. Arrival & Navigation State
   const [arrivalPhase, setArrivalPhase] = useState<
     "welcome" | "ascending" | "in_station"
-  >("welcome");
-  const [hasVisitedBefore, setHasVisitedBefore] = useState(false);
-  const [activeWaypointId, setActiveWaypointId] = useState<string>("atrium-center");
+  >("in_station");
+  const [hasVisitedBefore, setHasVisitedBefore] = useState(true);
+  const [activeWaypointId, setActiveWaypointId] = useState<string>("atrium-commons");
+  const [isRoomCardExpanded, setIsRoomCardExpanded] = useState(false);
   const [qualityTier, setQualityTier] = useState<QualityTier>("high");
   const [reducedMotion, setReducedMotion] = useState(false);
   const [liveAnnouncement, setLiveAnnouncement] = useState<string>("");
@@ -240,7 +241,7 @@ export function AtriumExperienceClient() {
 
   const handleSkipToDestination = useCallback(
     (waypointId?: string) => {
-      const targetId = waypointId || "atrium-center";
+      const targetId = waypointId || "atrium-commons";
       setArrivalPhase("in_station");
       handleSelectWaypoint(targetId);
       localStorage.setItem("hyperabundance_visited_v1", "true");
@@ -541,154 +542,159 @@ export function AtriumExperienceClient() {
         onToggleReducedMotion={() => setReducedMotion((prev) => !prev)}
       />
 
-      {/* Contextual Wing & Station Action Card (Left HUD Overlay) */}
+      {/* Compact Collapsible Room Badge & Quick Actions (Top-Left Below Nav) */}
       <aside
         aria-label="Current Room Context and Quick Actions"
-        className={`pointer-events-auto fixed top-20 left-4 z-20 hidden w-80 rounded-2xl border border-white/10 bg-slate-950/78 p-4 shadow-2xl backdrop-blur-xl transition-opacity duration-300 lg:block ${
+        className={`pointer-events-auto fixed top-16 left-4 z-20 hidden rounded-2xl border border-white/15 bg-slate-950/68 shadow-2xl backdrop-blur-xl transition-all duration-300 lg:block ${
+          isRoomCardExpanded ? "w-80 p-3.5" : "w-auto px-3 py-2"
+        } ${
           focusSession.isActive && !focusSession.isPaused
-            ? "opacity-30 hover:opacity-95"
+            ? "opacity-35 hover:opacity-95"
             : "opacity-100"
         }`}
       >
-        <div className="flex items-center justify-between gap-2">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-400/30 bg-sky-500/10 px-2.5 py-0.5 text-[10px] font-semibold tracking-wider uppercase text-sky-300">
-            <Compass className="h-3 w-3" />
-            {activeWaypoint.kind === "focus_pod"
-              ? "Outward Earthview Pod"
-              : activeWaypoint.kind === "sunken_lounge"
-              ? "Sunken Glass-Floor Lounge"
-              : activeWaypoint.wing === "atrium"
-              ? "Central Orbital Hub"
-              : activeWaypoint.wing === "levl"
-              ? "LEVL Longevity Wing"
-              : activeWaypoint.wing === "agifutures"
-              ? "AGI Futures Builder Wing"
-              : "Botanical Conservatory"}
-          </span>
-          <span className="text-[11px] text-slate-400">418 km LEO</span>
+        <div className="flex items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={() => setIsRoomCardExpanded((prev) => !prev)}
+            className="flex cursor-pointer items-center gap-2 text-left"
+          >
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-400/35 bg-sky-500/15 px-2.5 py-0.5 text-[10px] font-semibold tracking-wider uppercase text-sky-200">
+              <Compass className="h-3 w-3" />
+              {activeWaypoint.shortLabel}
+            </span>
+            <span className="text-[11px] font-medium text-slate-300 hover:text-white">
+              {isRoomCardExpanded ? "Hide Info ▴" : "Room Info & Actions ▾"}
+            </span>
+          </button>
+          <span className="text-[10px] text-slate-400">418 km LEO</span>
         </div>
 
-        <h1 className="mt-2 text-base font-semibold text-white">
-          {activeWaypoint.label}
-        </h1>
-        <p className="mt-1 text-xs leading-relaxed text-slate-300">
-          {activeWaypoint.description}
-        </p>
+        {isRoomCardExpanded && (
+          <div className="mt-2.5 border-t border-white/10 pt-2.5">
+            <h1 className="text-sm font-semibold text-white">
+              {activeWaypoint.label}
+            </h1>
+            <p className="mt-1 text-xs leading-relaxed text-slate-300">
+              {activeWaypoint.description}
+            </p>
 
-        {/* Contextual Quick Triggers Based on Wing */}
-        <div className="mt-3.5 grid grid-cols-1 gap-1.5">
-          {activeWaypoint.wing === "agifutures" ? (
-            <>
-              <button
-                type="button"
-                onClick={() => setIsIdeaDrawerOpen(true)}
-                className="flex items-center justify-between rounded-xl border border-emerald-400/30 bg-emerald-500/15 px-3 py-2 text-left text-xs font-medium text-emerald-200 transition hover:bg-emerald-500/25"
-              >
-                <span className="flex items-center gap-2">
-                  <Sparkles className="h-3.5 w-3.5 text-emerald-300" />
-                  Inspect Hologram ({activeIdea.title})
-                </span>
-                <span className="text-[10px] text-emerald-300/80">33 Ideas</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsMatchingDrawerOpen(true)}
-                className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-left text-xs font-medium text-slate-200 transition hover:bg-white/10"
-              >
-                <span className="flex items-center gap-2">
-                  <Users className="h-3.5 w-3.5 text-sky-300" />
-                  Co-Founder & Builder Matching
-                </span>
-                <span className="text-[10px] text-slate-400">
-                  {visibleBanners.length} Active
-                </span>
-              </button>
-            </>
-          ) : activeWaypoint.wing === "levl" ? (
-            <>
-              <button
-                type="button"
-                onClick={() => setIsLevlDrawerOpen(true)}
-                className="flex items-center justify-between rounded-xl border border-teal-400/30 bg-teal-500/15 px-3 py-2 text-left text-xs font-medium text-teal-200 transition hover:bg-teal-500/25"
-              >
-                <span className="flex items-center gap-2">
-                  <Sparkles className="h-3.5 w-3.5 text-teal-300" />
-                  Open LEVL Protocol Bar & Spa
-                </span>
-                <span className="text-[10px] text-teal-300/80">mylevl.ai</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsScreeningModalOpen(true)}
-                className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-left text-xs font-medium text-slate-200 transition hover:bg-white/10"
-              >
-                <span className="flex items-center gap-2">
-                  <Film className="h-3.5 w-3.5 text-amber-300" />
-                  Watch Research Screening Wall
-                </span>
-                <span className="text-[10px] text-slate-400">Auto-Ducks DJ</span>
-              </button>
-            </>
-          ) : (
-            <>
-              <div className="grid grid-cols-2 gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => handleSelectWaypoint("levl-lounge-entry")}
-                  className="flex items-center justify-center gap-1.5 rounded-xl border border-teal-400/25 bg-teal-500/10 px-2.5 py-2 text-xs font-medium text-teal-200 transition hover:bg-teal-500/20"
+            {/* Contextual Quick Triggers Based on Wing */}
+            <div className="mt-3 grid grid-cols-1 gap-1.5">
+              {activeWaypoint.wing === "agifutures" ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setIsIdeaDrawerOpen(true)}
+                    className="flex items-center justify-between rounded-xl border border-emerald-400/30 bg-emerald-500/15 px-3 py-2 text-left text-xs font-medium text-emerald-200 transition hover:bg-emerald-500/25"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Sparkles className="h-3.5 w-3.5 text-emerald-300" />
+                      Inspect Hologram ({activeIdea.title})
+                    </span>
+                    <span className="text-[10px] text-emerald-300/80">33 Ideas</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsMatchingDrawerOpen(true)}
+                    className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-left text-xs font-medium text-slate-200 transition hover:bg-white/10"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Users className="h-3.5 w-3.5 text-sky-300" />
+                      Co-Founder & Builder Matching
+                    </span>
+                    <span className="text-[10px] text-slate-400">
+                      {visibleBanners.length} Active
+                    </span>
+                  </button>
+                </>
+              ) : activeWaypoint.wing === "levl" ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setIsLevlDrawerOpen(true)}
+                    className="flex items-center justify-between rounded-xl border border-teal-400/30 bg-teal-500/15 px-3 py-2 text-left text-xs font-medium text-teal-200 transition hover:bg-teal-500/25"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Sparkles className="h-3.5 w-3.5 text-teal-300" />
+                      Open LEVL Protocol Bar & Spa
+                    </span>
+                    <span className="text-[10px] text-teal-300/80">mylevl.ai</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsScreeningModalOpen(true)}
+                    className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-left text-xs font-medium text-slate-200 transition hover:bg-white/10"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Film className="h-3.5 w-3.5 text-amber-300" />
+                      Watch Research Screening Wall
+                    </span>
+                    <span className="text-[10px] text-slate-400">Auto-Ducks DJ</span>
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => handleSelectWaypoint("levl-lounge-entry")}
+                      className="flex items-center justify-center gap-1.5 rounded-xl border border-teal-400/25 bg-teal-500/10 px-2.5 py-2 text-xs font-medium text-teal-200 transition hover:bg-teal-500/20"
+                    >
+                      LEVL Wing
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSelectWaypoint("agi-club-overview")}
+                      className="flex items-center justify-center gap-1.5 rounded-xl border border-emerald-400/25 bg-emerald-500/10 px-2.5 py-2 text-xs font-medium text-emerald-200 transition hover:bg-emerald-500/20"
+                    >
+                      AGI Futures
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setConciergeTab("briefing");
+                      setIsConciergeModalOpen(true);
+                    }}
+                    className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-left text-xs font-medium text-slate-200 transition hover:bg-white/10"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Layers className="h-3.5 w-3.5 text-amber-300" />
+                      Station Briefing & 2D Directory
+                    </span>
+                    <span className="text-[10px] text-slate-400">Open</span>
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* Sister Platform Direct Handoff Strip */}
+            <div className="mt-3 flex items-center justify-between border-t border-white/10 pt-2.5 text-[11px] text-slate-400">
+              <span>Sister Platforms:</span>
+              <div className="flex items-center gap-3">
+                <a
+                  href="https://www.mylevl.ai"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-teal-300 hover:underline"
                 >
-                  LEVL Wing
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSelectWaypoint("agifutures-club-entry")}
-                  className="flex items-center justify-center gap-1.5 rounded-xl border border-emerald-400/25 bg-emerald-500/10 px-2.5 py-2 text-xs font-medium text-emerald-200 transition hover:bg-emerald-500/20"
+                  myLEVL.ai
+                  <ExternalLink className="h-2.5 w-2.5" />
+                </a>
+                <a
+                  href="https://www.agifutures.org"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-emerald-300 hover:underline"
                 >
-                  AGI Futures
-                </button>
+                  AGIFutures.org
+                  <ExternalLink className="h-2.5 w-2.5" />
+                </a>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setConciergeTab("briefing");
-                  setIsConciergeModalOpen(true);
-                }}
-                className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-left text-xs font-medium text-slate-200 transition hover:bg-white/10"
-              >
-                <span className="flex items-center gap-2">
-                  <Layers className="h-3.5 w-3.5 text-amber-300" />
-                  Station Briefing & 2D Directory
-                </span>
-                <span className="text-[10px] text-slate-400">Open</span>
-              </button>
-            </>
-          )}
-        </div>
-
-        {/* Sister Platform Direct Handoff Strip */}
-        <div className="mt-3 flex items-center justify-between border-t border-white/10 pt-2.5 text-[11px] text-slate-400">
-          <span>Sister Platforms:</span>
-          <div className="flex items-center gap-3">
-            <a
-              href="https://www.mylevl.ai"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-teal-300 hover:underline"
-            >
-              myLEVL.ai
-              <ExternalLink className="h-2.5 w-2.5" />
-            </a>
-            <a
-              href="https://www.agifutures.org"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-emerald-300 hover:underline"
-            >
-              AGIFutures.org
-              <ExternalLink className="h-2.5 w-2.5" />
-            </a>
+            </div>
           </div>
-        </div>
+        )}
       </aside>
 
       {/* Bottom Focus Sanctuary Timer & Procedural DJ Bar */}

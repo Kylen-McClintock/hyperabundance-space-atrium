@@ -133,17 +133,30 @@ export function TopOrbitalNav({
           type="button"
           aria-pressed={currentWp.wing === "levl"}
           onClick={() => {
-            onSelectWaypoint("levl-protocol-bar");
-            onOpenLevlDrawer();
+            if (currentWp.wing === "levl") {
+              onOpenLevlDrawer();
+            } else {
+              onSelectWaypoint("levl-lounge-entry");
+            }
           }}
           className={`flex cursor-pointer items-center gap-1.5 rounded-xl border px-3 py-1.5 font-semibold transition ${
             currentWp.wing === "levl"
               ? "border-teal-300 bg-teal-400 text-slate-950"
               : "border-teal-400/35 bg-teal-950/50 text-teal-200 hover:bg-teal-900/70"
           }`}
+          title={
+            currentWp.wing === "levl"
+              ? "Open LEVL Protocol Bar & Evidence Drawer"
+              : "Enter the 3D LEVL Longevity Lounge"
+          }
         >
           <Sparkles className="h-3.5 w-3.5" />
-          LEVL Lounge & Bar
+          <span>LEVL Lounge</span>
+          {currentWp.wing === "levl" && (
+            <span className="rounded bg-slate-950/20 px-1.5 py-0.5 text-[10px]">
+              Open Bar
+            </span>
+          )}
         </button>
 
         {/* AGI Futures Wing Direct Button */}
@@ -151,17 +164,30 @@ export function TopOrbitalNav({
           type="button"
           aria-pressed={currentWp.wing === "agifutures"}
           onClick={() => {
-            onSelectWaypoint("agi-holo-table");
-            onOpenIdeaDrawer();
+            if (currentWp.wing === "agifutures") {
+              onOpenIdeaDrawer();
+            } else {
+              onSelectWaypoint("agi-club-overview");
+            }
           }}
           className={`flex cursor-pointer items-center gap-1.5 rounded-xl border px-3 py-1.5 font-semibold transition ${
             currentWp.wing === "agifutures"
               ? "border-emerald-300 bg-emerald-400 text-slate-950"
               : "border-emerald-400/35 bg-emerald-950/50 text-emerald-200 hover:bg-emerald-900/70"
           }`}
+          title={
+            currentWp.wing === "agifutures"
+              ? "Open 33 Holo-Ideas & Builder Guide Drawer"
+              : "Enter the 3D AGI Futures Inventor's Club"
+          }
         >
           <Compass className="h-3.5 w-3.5" />
-          AGI Futures (33 Holo Ideas)
+          <span>AGI Futures Club</span>
+          {currentWp.wing === "agifutures" && (
+            <span className="rounded bg-slate-950/20 px-1.5 py-0.5 text-[10px]">
+              33 Ideas
+            </span>
+          )}
         </button>
 
         {/* Connect / Matching Board */}
