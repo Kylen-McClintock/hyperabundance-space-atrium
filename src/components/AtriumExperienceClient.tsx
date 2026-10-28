@@ -489,6 +489,7 @@ export function AtriumExperienceClient() {
   return (
     <main
       id="content"
+      tabIndex={-1}
       className="relative h-screen w-screen overflow-hidden bg-[#030712] select-none"
     >
       {/* Screen-Reader Polite Live Region */}
