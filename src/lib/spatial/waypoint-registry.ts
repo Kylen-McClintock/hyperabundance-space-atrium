@@ -51,7 +51,7 @@ export interface SpatialWaypoint {
 
 export const SPATIAL_WAYPOINTS: SpatialWaypoint[] = [
   // =========================================================================
-  // 0. ARRIVAL (Space-Elevator Ascent)
+  // 0. ARRIVAL (Space-Elevator Ascent Shaft — South Atrium z = +20)
   // =========================================================================
   {
     id: "orbital-elevator-ascent",
@@ -62,14 +62,14 @@ export const SPATIAL_WAYPOINTS: SpatialWaypoint[] = [
     kind: "arrival_cabin",
     mode: "explore",
     description:
-      "Ascending through the upper thermosphere into the HyperAbundance Orbital Ring at 418 km LEO.",
-    cameraPos: [0, -2.5, 11.5],
-    lookAt: [0, 1.5, -12],
-    markerPos: [0, -3.5, -8.5],
+      "Ascending through the glass-and-brass Space Elevator Rotunda into the HyperAbundance Orbital Ring at 418 km LEO.",
+    cameraPos: [0, 1.8, 19.5],
+    lookAt: [0, 1.6, -12.0],
+    markerPos: [0, 1.2, 21.5],
   },
 
   // =========================================================================
-  // 1. SHARED ORBITAL ATRIUM (Stage: atrium-grand -> atrium-radiant-3.png)
+  // 1. SHARED ORBITAL ATRIUM (Center x: -20..+20, z: -22..+22)
   // =========================================================================
   {
     id: "atrium-commons",
@@ -80,168 +80,168 @@ export const SPATIAL_WAYPOINTS: SpatialWaypoint[] = [
     kind: "overview",
     mode: "explore",
     description:
-      "Monumental zero-G architectural sanctuary with branching ivory ribs, twin sunken glass-floor lounges over Earth, outward-protruding bubble pods, and radiant portals to LEVL and AGI Futures.",
-    cameraPos: [0, 0.35, 9.2],
-    lookAt: [0, 0.25, -12.0],
-    markerPos: [0, -1.2, -10.5],
+      "Full 360° zero-G architectural rotunda with swept ivory-travertine bionic ribs, twin sunken glass-floor lounges over Earth, upper mezzanine promenade, and glowing portals to LEVL (West) and AGI Futures (East).",
+    cameraPos: [0, 2.3, 11.5],
+    lookAt: [0, 1.4, -14.0],
+    markerPos: [0, 0.4, 0.0],
   },
   {
     id: "atrium-concierge",
-    label: "Holographic Concierge, Bartender & DJ Terrace",
-    shortLabel: "Concierge & DJ Deck",
+    label: "South Conservatory — AI Bartender, Library & DJ Terrace",
+    shortLabel: "Bartender & DJ Deck",
     wing: "atrium",
     stageId: "atrium-terrace",
     kind: "concierge_desk",
     mode: "explore",
     description:
-      "Close-up promenade featuring the holographic AI Resident Bartender, circular glass-walled botanical library, AGI Futures robotics bay, and live orbital DJ console.",
-    cameraPos: [0, 0.25, 8.8],
-    lookAt: [0, 0.15, -12.0],
-    markerPos: [-2.2, 0.6, -10.8],
+      "Turn 180° South in the Grand Atrium to visit the backlit Alabaster Cocktail Bar, Holographic Resident Concierge, live Orbital DJ booth, and the Space-Elevator Arrival Rotunda.",
+    cameraPos: [3.5, 2.0, 7.5],
+    lookAt: [10.5, 1.6, 15.5],
+    markerPos: [10.5, 1.6, 15.5],
   },
   {
     id: "lounge-pit-west",
-    label: "West Sunken Earth-Glass Lounge",
+    label: "West Sunken Earth-Glass Lounge Pit",
     shortLabel: "West Glass Lounge",
     wing: "atrium",
     stageId: "atrium-grand",
     kind: "sunken_lounge",
     mode: "connect",
     description:
-      "Recessed circular conversation pit with curved cream bouclé seating and a structural glass floor looking straight down at Earth's glowing city networks and clouds.",
-    cameraPos: [-3.2, -0.8, 4.6],
-    lookAt: [-5.6, -3.8, -10.5],
-    markerPos: [-5.6, -3.6, -9.2],
+      "Recessed circular conversation pit with curved cream bouclé sectional seating and a transparent structural glass floor looking straight down 418 km at Earth.",
+    cameraPos: [-8.5, 1.2, 2.8],
+    lookAt: [-8.5, -0.6, -4.5],
+    markerPos: [-8.5, -0.2, -2.5],
   },
   {
     id: "lounge-pit-east",
-    label: "East Sunken Earth-Glass Lounge",
+    label: "East Sunken Earth-Glass Lounge Pit",
     shortLabel: "East Glass Lounge",
     wing: "atrium",
     stageId: "atrium-grand",
     kind: "sunken_lounge",
     mode: "connect",
     description:
-      "Recessed circular conversation pit on the eastern deck with a transparent glass floor suspended directly over the orbital terminator line.",
-    cameraPos: [3.2, -0.8, 4.6],
-    lookAt: [5.8, -3.8, -10.5],
-    markerPos: [5.8, -3.6, -9.2],
+      "Recessed circular conversation pit on the eastern deck with curved bouclé sofas, warm table lanterns, and a structural glass oculus suspended over Earth's terminator line.",
+    cameraPos: [8.5, 1.2, 2.8],
+    lookAt: [8.5, -0.6, -4.5],
+    markerPos: [8.5, -0.2, -2.5],
   },
 
   // =========================================================================
-  // 2. OUTWARD-PROTRUDING EARTHVIEW BUBBLE PODS (Focus Sanctuary)
+  // 2. OUTWARD-PROTRUDING EARTHVIEW BUBBLE PODS (North Hull z = -21..-25)
   // =========================================================================
   {
     id: "pod-earthview-1",
-    label: "Earthview Bubble Pod α1 (Upper West — +24 ft)",
-    shortLabel: "Pod α1 (Upper West)",
+    label: "Earthview Bubble Pod α1 (Lower West — +4 ft)",
+    shortLabel: "Pod α1 (West)",
     wing: "atrium",
     stageId: "pods-workbays",
     kind: "focus_pod",
     mode: "focus",
-    elevationLabel: "+24 ft Upper Hull",
+    elevationLabel: "+4 ft Hull Rim",
     description:
-      "Outward-protruding convex glass bubble pod suspended along the upper western rib. Curved walnut desk faces directly toward Earth's horizon.",
-    cameraPos: [-2.8, 1.4, 5.2],
-    lookAt: [-5.4, 2.6, -11.0],
-    markerPos: [-8.2, 4.3, -9.8],
+      "Outward-protruding spherical glass biosphere pod along the western hull rim. Step inside to a curved walnut focus desk facing Earth, or turn 180° around to look back across the glowing Atrium.",
+    cameraPos: [-13.5, 2.0, -21.2],
+    lookAt: [-15.0, 1.4, -29.0],
+    markerPos: [-14.0, 1.8, -22.5],
   },
   {
     id: "pod-earthview-2",
-    label: "Earthview Bubble Pod α2 (Apex West — +28 ft)",
-    shortLabel: "Pod α2 (Apex West)",
+    label: "Earthview Bubble Pod α2 (Lower Center-West — +4 ft)",
+    shortLabel: "Pod α2 (Center-West)",
     wing: "atrium",
     stageId: "pods-garden",
     kind: "focus_pod",
     mode: "focus",
-    elevationLabel: "+28 ft Upper Hull",
+    elevationLabel: "+4 ft Hull Rim",
     description:
-      "High-altitude zero-G glass bubble pod nestled in the upper botanical canopy with an unobstructed view of Earth's atmospheric limb.",
-    cameraPos: [-1.8, 1.8, 5.0],
-    lookAt: [-4.5, 4.2, -11.2],
-    markerPos: [-4.6, 5.6, -10.8],
+      "Outward-protruding glass focus capsule suspended beyond the northern observation wall with an unobstructed 270° horizon view of Earth.",
+    cameraPos: [-4.8, 2.0, -23.0],
+    lookAt: [-5.2, 1.4, -31.0],
+    markerPos: [-5.0, 1.8, -24.2],
   },
   {
     id: "pod-earthview-3",
-    label: "Earthview Bubble Pod β1 (Apex East — +28 ft)",
-    shortLabel: "Pod β1 (Apex East)",
+    label: "Earthview Bubble Pod β1 (Lower Center-East — +4 ft)",
+    shortLabel: "Pod β1 (Center-East)",
     wing: "atrium",
     stageId: "pods-garden",
     kind: "focus_pod",
     mode: "focus",
-    elevationLabel: "+28 ft Upper Hull",
+    elevationLabel: "+4 ft Hull Rim",
     description:
-      "Upper-hull outward glass bubble pod tuned for deep writing and architectural systems work above the orbital horizon.",
-    cameraPos: [1.8, 1.6, 5.0],
-    lookAt: [4.8, 3.8, -11.2],
-    markerPos: [5.4, 2.8, -11.2],
+      "Outward-protruding spherical glass focus pod tuned for deep writing and architectural systems work directly over the orbital horizon.",
+    cameraPos: [4.8, 2.0, -23.0],
+    lookAt: [5.2, 1.4, -31.0],
+    markerPos: [5.0, 1.8, -24.2],
   },
   {
     id: "pod-earthview-4",
-    label: "Earthview Bubble Pod β2 (Upper East — +24 ft)",
-    shortLabel: "Pod β2 (Upper East)",
+    label: "Earthview Bubble Pod β2 (Lower East — +4 ft)",
+    shortLabel: "Pod β2 (East)",
     wing: "atrium",
     stageId: "pods-workbays",
     kind: "focus_pod",
     mode: "focus",
-    elevationLabel: "+24 ft Upper Hull",
+    elevationLabel: "+4 ft Hull Rim",
     description:
       "Outward-protruding convex glass sphere along the eastern structural rib overlooking continental cloud formations and city lights.",
-    cameraPos: [2.8, 1.4, 5.2],
-    lookAt: [5.6, 2.8, -11.0],
-    markerPos: [10.4, 4.2, -9.2],
+    cameraPos: [13.5, 2.0, -21.2],
+    lookAt: [15.0, 1.4, -29.0],
+    markerPos: [14.0, 1.8, -22.5],
   },
   {
     id: "pod-earthview-5",
-    label: "Earthview Bubble Pod γ1 (Mid-Deck West — +12 ft)",
-    shortLabel: "Pod γ1 (Mid West)",
+    label: "Earthview Bubble Pod γ1 (Upper Mezzanine West — +18 ft)",
+    shortLabel: "Pod γ1 (Upper West)",
     wing: "atrium",
     stageId: "pods-workbays",
     kind: "focus_pod",
     mode: "focus",
-    elevationLabel: "+12 ft Mid Hull",
+    elevationLabel: "+18 ft Mezzanine",
     description:
-      "Mid-level outward bubble capsule with botanical acoustic planters and warm walnut work bay facing Earth.",
-    cameraPos: [-1.5, 0.8, 5.8],
-    lookAt: [-3.8, 1.8, -11.2],
-    markerPos: [-4.6, 2.6, -11.2],
+      "Elevated second-story outward glass bubble pod accessed from the Upper Mezzanine Promenade, suspended high above the orbital horizon.",
+    cameraPos: [-9.5, 6.6, -21.5],
+    lookAt: [-10.5, 5.8, -29.5],
+    markerPos: [-9.8, 6.4, -22.8],
   },
   {
     id: "pod-earthview-6",
-    label: "Earthview Bubble Pod γ2 (Mid-Deck East — +12 ft)",
-    shortLabel: "Pod γ2 (Mid East)",
+    label: "Earthview Bubble Pod γ2 (Upper Mezzanine East — +18 ft)",
+    shortLabel: "Pod γ2 (Upper East)",
     wing: "atrium",
     stageId: "pods-garden",
     kind: "focus_pod",
     mode: "focus",
-    elevationLabel: "+12 ft Mid Hull",
+    elevationLabel: "+18 ft Mezzanine",
     description:
-      "Mid-level outward glass bubble pod framed by cascading biophilic foliage and direct Earth horizon views.",
-    cameraPos: [1.5, 0.8, 5.8],
-    lookAt: [4.2, 1.8, -11.2],
-    markerPos: [7.6, -0.1, -11.0],
+      "Elevated second-story outward glass bubble pod framed by cascading biophilic foliage and direct Earth horizon views.",
+    cameraPos: [9.5, 6.6, -21.5],
+    lookAt: [10.5, 5.8, -29.5],
+    markerPos: [9.8, 6.4, -22.8],
   },
 
   // =========================================================================
-  // 3. LEVL LONGEVITY LOUNGE & SPA WING (Stage: levl-lounge -> levl-lounge.png)
+  // 3. LEVL LONGEVITY LOUNGE & SPA WING (West Wing x = -22..-54)
   // =========================================================================
   {
     id: "levl-lounge-entry",
-    label: "LEVL Longevity Lounge — Overview",
+    label: "LEVL Longevity Lounge — 360° Wing Overview",
     shortLabel: "LEVL Lounge",
     wing: "levl",
     stageId: "levl-lounge",
     kind: "overview",
     mode: "explore",
     description:
-      "Botanical luxury longevity sanctuary in ivory travertine, warm walnut, and glowing cyan-emerald accents featuring the Protocol Bar, Earth-Glass Lounge Pit, and Research Screening Wall.",
-    cameraPos: [0, 0.35, 9.0],
-    lookAt: [0, 0.2, -12.0],
-    markerPos: [-12.6, 0.3, -9.2],
+      "Walkable 360° botanical longevity sanctuary in honed travertine, warm walnut, and glowing cyan-teal accents featuring the Fluted Alabaster Protocol Bar, Sunken Recovery Pit, Sauna/Cold Plunge, HBOT Alcove, and Screening Wall.",
+    cameraPos: [-26.0, 2.2, 4.5],
+    lookAt: [-40.0, 1.5, -2.0],
+    markerPos: [-35.0, 0.5, 0.0],
   },
   {
     id: "levl-protocol-bar",
-    label: "LEVL Protocol Bar & Sora AI Bartender",
+    label: "LEVL Fluted Alabaster Protocol Bar & Sora AI Coach",
     shortLabel: "Protocol Bar",
     wing: "levl",
     stageId: "levl-lounge",
@@ -249,10 +249,10 @@ export const SPATIAL_WAYPOINTS: SpatialWaypoint[] = [
     mode: "explore",
     defaultModalitySlug: "zone-2-and-vo2max-training",
     description:
-      "Backlit fluted alabaster Longevity Bar where you can consult Sora (LEVL AI Coach), inspect PubMed RCT evidence, and hand off a draft protocol to mylevl.ai.",
-    cameraPos: [-3.6, -0.2, 4.8],
-    lookAt: [-9.2, -0.8, -10.5],
-    markerPos: [-9.5, -1.0, -9.8],
+      "Backlit fluted alabaster Longevity Bar with glowing apothecary vial shelving where you can consult Sora (LEVL AI Coach), inspect PubMed RCT evidence, and hand off a draft protocol to mylevl.ai.",
+    cameraPos: [-40.5, 1.9, 0.0],
+    lookAt: [-48.5, 1.6, 0.0],
+    markerPos: [-46.5, 1.5, 0.0],
   },
   {
     id: "levl-screening-wall",
@@ -263,10 +263,10 @@ export const SPATIAL_WAYPOINTS: SpatialWaypoint[] = [
     kind: "screening_wall",
     mode: "explore",
     description:
-      "Dedicated research screening theater wall with curated longevity science talks, linked PubMed evidence cards, and automatic DJ audio ducking.",
-    cameraPos: [3.6, 0.1, 4.8],
-    lookAt: [9.5, 0.2, -10.5],
-    markerPos: [9.8, 0.2, -9.8],
+      "Dedicated research screening theater wall on the south side of the LEVL wing with curated longevity science talks, linked PubMed evidence cards, and automatic DJ audio ducking.",
+    cameraPos: [-33.0, 1.9, 6.5],
+    lookAt: [-33.0, 2.2, 14.5],
+    markerPos: [-33.0, 2.2, 13.8],
   },
   {
     id: "levl-spa-sauna",
@@ -278,14 +278,14 @@ export const SPATIAL_WAYPOINTS: SpatialWaypoint[] = [
     mode: "explore",
     defaultModalitySlug: "finnish-sauna",
     description:
-      "Inspect human clinical evidence, HSP70/eNOS mechanisms, hypertrophy timing caveats, and real-world protocols for 80°C+ heat and 10–15°C cold exposure.",
-    cameraPos: [-2.4, 1.2, 5.2],
-    lookAt: [-6.8, 2.4, -11.0],
-    markerPos: [-6.8, 2.4, -10.6],
+      "Warm cedar-slatted Finnish Dry Sauna and illuminated Cold Plunge basin on the north-west spa deck. Inspect human clinical evidence, HSP70/eNOS mechanisms, and timing protocols.",
+    cameraPos: [-36.0, 1.9, -6.5],
+    lookAt: [-38.0, 1.6, -14.0],
+    markerPos: [-38.0, 1.6, -12.8],
   },
   {
     id: "levl-spa-hbot",
-    label: "Hyperbaric Oxygen (HBOT) & Photobiomodulation Alcove",
+    label: "Hyperbaric Oxygen (HBOT) & 660nm Photobiomodulation Alcove",
     shortLabel: "HBOT & Red Light",
     wing: "levl",
     stageId: "levl-lounge",
@@ -293,28 +293,28 @@ export const SPATIAL_WAYPOINTS: SpatialWaypoint[] = [
     mode: "explore",
     defaultModalitySlug: "hyperbaric-oxygen-therapy",
     description:
-      "Review hyperoxic-hypoxic paradox trials (2.0 ATA), red/NIR irradiance windows (660nm / 850nm), contraindications, and clinical evidence grades.",
-    cameraPos: [2.4, 1.2, 5.2],
-    lookAt: [6.8, 2.6, -11.0],
-    markerPos: [6.8, 2.6, -10.6],
+      "Cylindrical glass-and-brass 2.0 ATA Hyperbaric Chamber and 660nm/850nm Red/NIR Photobiomodulation alcove in the south-west spa sanctuary.",
+    cameraPos: [-40.0, 1.9, 6.5],
+    lookAt: [-44.5, 1.6, 13.5],
+    markerPos: [-44.0, 1.6, 12.2],
   },
 
   // =========================================================================
-  // 4. AGI FUTURES BUILDER CLUB WING (Stage: agifutures-club -> agifutures-club.png)
+  // 4. AGI FUTURES BUILDER CLUB WING (East Wing x = +22..+54)
   // =========================================================================
   {
     id: "agi-club-overview",
-    label: "AGI Futures Inventor's Club — Overview",
+    label: "AGI Futures Inventor's Club — 360° Wing Overview",
     shortLabel: "AGI Futures Club",
     wing: "agifutures",
     stageId: "agifutures-club",
     kind: "overview",
     mode: "explore",
     description:
-      "High-craft inventor's club in warm walnut, brushed brass, and radiant emerald with the Central Holographic Blueprint Table, 6 Sector Idea Booths, and Earth-glass floor.",
-    cameraPos: [0, 0.35, 9.0],
-    lookAt: [0, 0.2, -12.0],
-    markerPos: [12.6, 0.3, -9.2],
+      "Walkable 360° inventor's club in warm American walnut, brushed brass, and radiant emerald featuring the Central Holographic Blueprint Table, 6 curved Sector Idea Booths, and Earth-glass floor.",
+    cameraPos: [26.0, 2.2, 4.5],
+    lookAt: [38.0, 1.4, -1.5],
+    markerPos: [36.0, 0.5, 0.0],
   },
   {
     id: "agi-holo-table",
@@ -326,10 +326,10 @@ export const SPATIAL_WAYPOINTS: SpatialWaypoint[] = [
     mode: "explore",
     defaultSectorId: "homes-cities",
     description:
-      "Interactive holographic centerpiece projecting 3D architectural and deep-tech models. Swipe through all 33 canonical AGI Futures startup ideas across 6 sectors in place.",
-    cameraPos: [0, -0.2, 4.4],
-    lookAt: [0, -1.2, -10.2],
-    markerPos: [0, -1.3, -9.6],
+      "Monumental 5-meter circular walnut-and-brass table projecting rotating 3D architectural and deep-tech holograms. Swipe through all 33 canonical AGI Futures startup ideas across 6 sectors in place.",
+    cameraPos: [31.2, 2.0, 3.2],
+    lookAt: [36.0, 1.3, 0.0],
+    markerPos: [36.0, 1.4, 0.0],
   },
   {
     id: "agi-booth-homes",
@@ -341,10 +341,10 @@ export const SPATIAL_WAYPOINTS: SpatialWaypoint[] = [
     mode: "explore",
     defaultSectorId: "homes-cities",
     description:
-      "Holographic booth showcasing Signal House, Porchfront, Hearth, HouseGraph, HomeQuote, and CommonGround. Swipe ideas or switch sectors in place.",
-    cameraPos: [-3.4, -0.1, 4.8],
-    lookAt: [-9.2, -0.6, -10.2],
-    markerPos: [-9.4, -0.6, -9.6],
+      "North-West curved walnut booth showcasing Signal House, Porchfront, Hearth, HouseGraph, HomeQuote, and CommonGround.",
+    cameraPos: [29.5, 1.9, -6.2],
+    lookAt: [29.5, 1.5, -12.5],
+    markerPos: [29.5, 1.6, -11.5],
   },
   {
     id: "agi-booth-energy",
@@ -356,10 +356,10 @@ export const SPATIAL_WAYPOINTS: SpatialWaypoint[] = [
     mode: "explore",
     defaultSectorId: "clean-energy-planet",
     description:
-      "Holographic booth showcasing HelioTerra, Skyhold, Wild Return, and Waypoint. Swipe ideas or switch sectors in place.",
-    cameraPos: [-2.0, 0.4, 5.2],
-    lookAt: [-5.6, 0.6, -11.0],
-    markerPos: [-5.6, 0.6, -10.8],
+      "North-Center curved walnut booth showcasing HelioTerra, Skyhold, Wild Return, and Waypoint.",
+    cameraPos: [36.5, 1.9, -6.2],
+    lookAt: [36.5, 1.5, -12.5],
+    markerPos: [36.5, 1.6, -11.5],
   },
   {
     id: "agi-booth-biotech",
@@ -371,10 +371,10 @@ export const SPATIAL_WAYPOINTS: SpatialWaypoint[] = [
     mode: "explore",
     defaultSectorId: "biotech-longevity",
     description:
-      "Holographic booth showcasing BioWalls, BioArk, BiomeX, Attune, Thoughtline, and Afterlight.",
-    cameraPos: [-0.8, 0.5, 5.2],
-    lookAt: [-2.4, 0.9, -11.2],
-    markerPos: [-2.4, 0.9, -11.0],
+      "North-East curved walnut booth showcasing BioWalls, BioArk, BiomeX, Attune, Thoughtline, and Afterlight.",
+    cameraPos: [43.5, 1.9, -6.2],
+    lookAt: [43.5, 1.5, -12.5],
+    markerPos: [43.5, 1.6, -11.5],
   },
   {
     id: "agi-booth-ai",
@@ -386,10 +386,10 @@ export const SPATIAL_WAYPOINTS: SpatialWaypoint[] = [
     mode: "explore",
     defaultSectorId: "ai-autonomous-enterprise",
     description:
-      "Holographic booth showcasing Main Street Legacy, AI Founder Lab, Agentable, Helm, ProofRun, SellCraft, and Easy Exit.",
-    cameraPos: [2.0, 0.4, 5.2],
-    lookAt: [5.6, 0.5, -11.0],
-    markerPos: [5.6, 0.5, -10.8],
+      "South-West curved walnut booth showcasing Main Street Legacy, AI Founder Lab, Agentable, Helm, ProofRun, SellCraft, and Easy Exit.",
+    cameraPos: [29.5, 1.9, 6.2],
+    lookAt: [29.5, 1.5, 12.5],
+    markerPos: [29.5, 1.6, 11.5],
   },
   {
     id: "agi-builder-guide",
@@ -401,10 +401,10 @@ export const SPATIAL_WAYPOINTS: SpatialWaypoint[] = [
     mode: "explore",
     defaultSectorId: "ai-autonomous-enterprise",
     description:
-      "Consult Kaelen (AGI Futures AI Builder Guide) to unpack blueprint assumptions, design falsifiable 14-day experiments, and match your skills to high-leverage problems.",
-    cameraPos: [3.4, -0.1, 4.8],
-    lookAt: [9.2, -0.8, -10.2],
-    markerPos: [9.4, -0.8, -9.6],
+      "Consult Kaelen (AGI Futures AI Builder Guide) at the Eastern Observatory Desk to unpack blueprint assumptions, design falsifiable 14-day experiments, and match your skills.",
+    cameraPos: [44.0, 1.9, -2.5],
+    lookAt: [50.0, 1.5, -4.0],
+    markerPos: [49.2, 1.5, -4.0],
   },
   {
     id: "agi-matching-wall",
@@ -415,29 +415,29 @@ export const SPATIAL_WAYPOINTS: SpatialWaypoint[] = [
     kind: "matching_board",
     mode: "connect",
     description:
-      "Browse asynchronous builder intentions, post your own Building / Looking For / Can Help banner, and send high-signal introductions.",
-    cameraPos: [1.2, 1.1, 5.4],
-    lookAt: [3.2, 2.2, -11.0],
-    markerPos: [3.2, 2.2, -10.8],
+      "Browse asynchronous builder intentions on the holographic Founder Matching Wall, post your own Building / Looking For / Can Help banner, and send high-signal introductions.",
+    cameraPos: [44.0, 1.9, 3.5],
+    lookAt: [50.0, 1.8, 5.0],
+    markerPos: [49.2, 1.8, 5.0],
   },
 
   // =========================================================================
-  // 5. UPPER CONSERVATORY & BOTANICAL READING DECK (Stage: atrium-terrace)
+  // 5. SOUTH CONSERVATORY & BOTANICAL READING LIBRARY (South Atrium z = +15.5)
   // =========================================================================
   {
     id: "conservatory-deck",
-    label: "Botanical Library & Quiet Conservatory",
+    label: "Circular Glass Botanical Library & Reading Conservatory",
     shortLabel: "Library Conservatory",
     wing: "conservatory",
     stageId: "atrium-terrace",
     kind: "reading_nook",
     mode: "focus",
-    elevationLabel: "+22 ft Canopy Deck",
+    elevationLabel: "South Conservatory",
     description:
-      "Circular glass-walled botanical reading library and quiet terrace overlooking Earth and the holographic bartender lounge.",
-    cameraPos: [-0.8, 0.4, 5.4],
-    lookAt: [-2.2, 0.5, -11.2],
-    markerPos: [-2.2, 0.5, -10.8],
+      "Two-story circular glass-walled botanical reading library in the South Atrium with illuminated walnut bookcases, plush reading armchairs, and a central indoor canopy tree.",
+    cameraPos: [-4.5, 2.0, 9.0],
+    lookAt: [-10.5, 1.8, 15.5],
+    markerPos: [-10.5, 1.8, 15.5],
   },
 ];
 
