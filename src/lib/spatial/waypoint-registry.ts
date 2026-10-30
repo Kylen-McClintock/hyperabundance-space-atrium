@@ -5,11 +5,13 @@ export type WingId =
   | "atrium"
   | "levl"
   | "agifutures"
+  | "tobehuman"
   | "conservatory";
 
 export type StageId =
   | "atrium-grand"
   | "atrium-terrace"
+  | "tobehuman-sanctuary"
   | "pods-workbays"
   | "pods-garden"
   | "levl-lounge"
@@ -55,10 +57,10 @@ export const SPATIAL_WAYPOINTS: SpatialWaypoint[] = [
   // =========================================================================
   {
     id: "orbital-elevator-ascent",
-    label: "Orbital Tether Ascent Cabin",
+    label: "Orbital Tether Ascent Cabin & Arrival Rotunda",
     shortLabel: "Space Elevator",
     wing: "arrival",
-    stageId: "atrium-grand",
+    stageId: "atrium-terrace",
     kind: "arrival_cabin",
     mode: "explore",
     description:
@@ -69,32 +71,46 @@ export const SPATIAL_WAYPOINTS: SpatialWaypoint[] = [
   },
 
   // =========================================================================
-  // 1. SHARED ORBITAL ATRIUM (Center x: -20..+20, z: -22..+22)
+  // 1. SHARED ORBITAL ATRIUM (Front Earth View + 180° Rear Rotunda)
   // =========================================================================
   {
     id: "atrium-commons",
-    label: "Shared Orbital Atrium — Grand Commons",
-    shortLabel: "Atrium Commons",
+    label: "Shared Orbital Atrium — Facing Earth (Front 5.5K Panorama)",
+    shortLabel: "Atrium (Earth View)",
     wing: "atrium",
     stageId: "atrium-grand",
     kind: "overview",
     mode: "explore",
     description:
-      "Full 360° zero-G architectural rotunda with swept ivory-travertine bionic ribs, twin sunken glass-floor lounges over Earth, upper mezzanine promenade, and glowing portals to LEVL (West) and AGI Futures (East).",
+      "5.5K ultra-wide observation rotunda facing Planet Earth with swept ivory-travertine bionic ribs, Orbital Telemetry Astrolabe Hearth, twin sunken Earth-glass conversation pits, cantilevered glass focus pods, and glowing portals to LEVL (Left) and AGI Futures (Right).",
     cameraPos: [0, 2.3, 11.5],
     lookAt: [0, 1.4, -14.0],
     markerPos: [0, 0.4, 0.0],
   },
   {
+    id: "atrium-rear-rotunda",
+    label: "Shared Orbital Atrium — 180° Rear Rotunda (Space Elevator & TO BE HUMAN Portal)",
+    shortLabel: "Atrium (180° Rear View)",
+    wing: "atrium",
+    stageId: "atrium-terrace",
+    kind: "overview",
+    mode: "explore",
+    description:
+      "Turn 180° around in the Grand Atrium to face the soaring glass Space-Elevator Arrival Shaft, Holographic Station Concierge Desk, TO BE HUMAN Wing Portal (Left), Backlit Fluted-Alabaster Lounge Bar & DJ Terrace (Right), and Aurora Earth-Glass Floor Oculi.",
+    cameraPos: [0, 2.3, -8.5],
+    lookAt: [0, 1.8, 18.0],
+    markerPos: [0, 1.2, 16.0],
+  },
+  {
     id: "atrium-concierge",
-    label: "South Conservatory — AI Bartender, Library & DJ Terrace",
-    shortLabel: "Bartender & DJ Deck",
+    label: "Rear Atrium — Alabaster Social Bar, Concierge & Orbital DJ Terrace",
+    shortLabel: "Alabaster Bar & DJ",
     wing: "atrium",
     stageId: "atrium-terrace",
     kind: "concierge_desk",
     mode: "explore",
     description:
-      "Turn 180° South in the Grand Atrium to visit the backlit Alabaster Cocktail Bar, Holographic Resident Concierge, live Orbital DJ booth, and the Space-Elevator Arrival Rotunda.",
+      "Curved backlit fluted-alabaster Lounge Bar with cream bouclé barstools and the elevated second-story Orbital DJ Soundscape Terrace in the Rear Atrium.",
     cameraPos: [3.5, 2.0, 7.5],
     lookAt: [10.5, 1.6, 15.5],
     markerPos: [10.5, 1.6, 15.5],
@@ -422,19 +438,64 @@ export const SPATIAL_WAYPOINTS: SpatialWaypoint[] = [
   },
 
   // =========================================================================
-  // 5. SOUTH CONSERVATORY & BOTANICAL READING LIBRARY (South Atrium z = +15.5)
+  // 5. TO BE HUMAN SANCTUARY WING (Purpose & Consciousness in the AGI Era)
   // =========================================================================
+  {
+    id: "tobehuman-sanctuary",
+    label: "TO BE HUMAN Sanctuary — Purpose & Consciousness in the AGI Era (5.5K Panorama)",
+    shortLabel: "TO BE HUMAN Wing",
+    wing: "tobehuman",
+    stageId: "tobehuman-sanctuary",
+    kind: "overview",
+    mode: "focus",
+    elevationLabel: "Consciousness Wing",
+    description:
+      "Transcendent orbital sanctuary dedicated to human consciousness, existential purpose, and deep contemplation—featuring the Zero-G Obsidian Reflection Pool over the Aurora Earth Oculus, Ancient Bonsai Tree of Life, Golden Neural-Cosmos Sculpture, Socratic Dialogue Amphitheater, and Two-Story Wisdom Library.",
+    cameraPos: [-18.0, 2.2, 16.0],
+    lookAt: [-30.0, 1.8, 22.0],
+    markerPos: [-28.0, 1.2, 20.0],
+  },
+  {
+    id: "tobehuman-amphitheater",
+    label: "TO BE HUMAN — Socratic Dialogue Amphitheater & Contemplation Pods",
+    shortLabel: "Socratic Amphitheater",
+    wing: "tobehuman",
+    stageId: "tobehuman-sanctuary",
+    kind: "sunken_lounge",
+    mode: "connect",
+    elevationLabel: "West Sanctuary",
+    description:
+      "Stepped curved cream-travertine and bouclé amphitheater seating with warm recessed candlelight coves for intimate philosophical salons and existential inquiry.",
+    cameraPos: [-24.0, 2.0, 14.0],
+    lookAt: [-34.0, 1.5, 18.0],
+    markerPos: [-32.0, 1.5, 18.0],
+  },
+  {
+    id: "tobehuman-library",
+    label: "TO BE HUMAN — Two-Story Wisdom & Consciousness Library Rotunda",
+    shortLabel: "Wisdom Library",
+    wing: "tobehuman",
+    stageId: "tobehuman-sanctuary",
+    kind: "reading_nook",
+    mode: "focus",
+    elevationLabel: "East Sanctuary",
+    description:
+      "Two-story curved oiled American walnut bookcases housing humanity's foundational philosophical texts, brushed-brass rolling ladders, and quiet contemplation alcoves.",
+    cameraPos: [-14.0, 2.0, 18.0],
+    lookAt: [-22.0, 2.2, 26.0],
+    markerPos: [-21.0, 2.0, 25.0],
+  },
   {
     id: "conservatory-deck",
     label: "Circular Glass Botanical Library & Reading Conservatory",
     shortLabel: "Library Conservatory",
-    wing: "conservatory",
-    stageId: "atrium-terrace",
+    wing: "tobehuman",
+    stageId: "tobehuman-sanctuary",
     kind: "reading_nook",
     mode: "focus",
     elevationLabel: "South Conservatory",
     description:
-      "Two-story circular glass-walled botanical reading library in the South Atrium with illuminated walnut bookcases, plush reading armchairs, and a central indoor canopy tree.",
+      "Two-story circular glass-walled botanical reading library in the TO BE HUMAN Sanctuary with illuminated walnut bookcases, plush reading armchairs, and a central bonsai canopy tree.",
     cameraPos: [-4.5, 2.0, 9.0],
     lookAt: [-10.5, 1.8, 15.5],
     markerPos: [-10.5, 1.8, 15.5],

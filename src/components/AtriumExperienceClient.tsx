@@ -635,18 +635,25 @@ export function AtriumExperienceClient() {
                 </>
               ) : (
                 <>
-                  <div className="grid grid-cols-2 gap-1.5">
+                  <div className="grid grid-cols-3 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => handleSelectWaypoint("tobehuman-sanctuary")}
+                      className="flex items-center justify-center gap-1 rounded-xl border border-violet-400/30 bg-violet-500/15 px-2 py-2 text-xs font-medium text-violet-200 transition hover:bg-violet-500/25"
+                    >
+                      TO BE HUMAN
+                    </button>
                     <button
                       type="button"
                       onClick={() => handleSelectWaypoint("levl-lounge-entry")}
-                      className="flex items-center justify-center gap-1.5 rounded-xl border border-teal-400/25 bg-teal-500/10 px-2.5 py-2 text-xs font-medium text-teal-200 transition hover:bg-teal-500/20"
+                      className="flex items-center justify-center gap-1 rounded-xl border border-teal-400/25 bg-teal-500/10 px-2 py-2 text-xs font-medium text-teal-200 transition hover:bg-teal-500/20"
                     >
                       LEVL Wing
                     </button>
                     <button
                       type="button"
                       onClick={() => handleSelectWaypoint("agi-club-overview")}
-                      className="flex items-center justify-center gap-1.5 rounded-xl border border-emerald-400/25 bg-emerald-500/10 px-2.5 py-2 text-xs font-medium text-emerald-200 transition hover:bg-emerald-500/20"
+                      className="flex items-center justify-center gap-1 rounded-xl border border-emerald-400/25 bg-emerald-500/10 px-2 py-2 text-xs font-medium text-emerald-200 transition hover:bg-emerald-500/20"
                     >
                       AGI Futures
                     </button>

@@ -89,15 +89,45 @@ export function TopOrbitalNav({
       <nav aria-label="Primary" className="flex flex-wrap items-center gap-1.5">
         <button
           type="button"
-          aria-pressed={currentWp.wing === "atrium" && currentWp.kind !== "focus_pod"}
+          aria-pressed={activeWaypointId === "atrium-commons" || (currentWp.stageId === "atrium-grand" && currentWp.kind !== "focus_pod")}
           onClick={() => onSelectWaypoint("atrium-commons")}
           className={`cursor-pointer rounded-xl px-3 py-1.5 font-medium transition ${
-            currentWp.wing === "atrium" && currentWp.kind !== "focus_pod"
-              ? "bg-amber-300 text-slate-950 font-semibold"
+            activeWaypointId === "atrium-commons" || (currentWp.stageId === "atrium-grand" && currentWp.kind !== "focus_pod")
+              ? "bg-amber-300 text-slate-950 font-semibold shadow-[0_0_15px_rgba(252,211,77,0.35)]"
               : "border border-white/10 bg-white/5 text-slate-200 hover:bg-white/10"
           }`}
         >
-          Atrium & Lounges
+          Atrium (Earth View)
+        </button>
+
+        <button
+          type="button"
+          aria-pressed={currentWp.stageId === "atrium-terrace"}
+          onClick={() => onSelectWaypoint("atrium-rear-rotunda")}
+          className={`cursor-pointer rounded-xl px-3 py-1.5 font-medium transition ${
+            currentWp.stageId === "atrium-terrace"
+              ? "bg-amber-300 text-slate-950 font-semibold shadow-[0_0_15px_rgba(252,211,77,0.35)]"
+              : "border border-amber-300/30 bg-amber-950/40 text-amber-200 hover:bg-amber-900/50"
+          }`}
+          title="Flip 180° to Rear Atrium Rotunda (Space Elevator, TO BE HUMAN Portal, Alabaster Bar & DJ Terrace)"
+        >
+          ↻ 180° Rear Rotunda
+        </button>
+
+        {/* TO BE HUMAN Sanctuary Wing Direct Button */}
+        <button
+          type="button"
+          aria-pressed={currentWp.wing === "tobehuman"}
+          onClick={() => onSelectWaypoint("tobehuman-sanctuary")}
+          className={`flex cursor-pointer items-center gap-1.5 rounded-xl border px-3 py-1.5 font-semibold transition ${
+            currentWp.wing === "tobehuman"
+              ? "border-violet-300 bg-violet-300 text-slate-950 shadow-[0_0_15px_rgba(196,181,253,0.4)]"
+              : "border-violet-400/35 bg-violet-950/50 text-violet-200 hover:bg-violet-900/70"
+          }`}
+          title="Enter the 5.5K TO BE HUMAN Consciousness & Purpose Sanctuary"
+        >
+          <Sparkles className="h-3.5 w-3.5" />
+          <span>TO BE HUMAN</span>
         </button>
 
         {/* Earthview Bubble Pod Direct Selector */}
@@ -147,7 +177,7 @@ export function TopOrbitalNav({
           title={
             currentWp.wing === "levl"
               ? "Open LEVL Protocol Bar & Evidence Drawer"
-              : "Enter the 3D LEVL Longevity Lounge"
+              : "Enter the LEVL Longevity Lounge"
           }
         >
           <Sparkles className="h-3.5 w-3.5" />
@@ -178,7 +208,7 @@ export function TopOrbitalNav({
           title={
             currentWp.wing === "agifutures"
               ? "Open 33 Holo-Ideas & Builder Guide Drawer"
-              : "Enter the 3D AGI Futures Inventor's Club"
+              : "Enter the AGI Futures Inventor's Club"
           }
         >
           <Compass className="h-3.5 w-3.5" />
@@ -194,7 +224,6 @@ export function TopOrbitalNav({
         <button
           type="button"
           onClick={() => {
-            onSelectWaypoint("agi-matching-wall");
             onOpenMatchingDrawer();
           }}
           className="flex cursor-pointer items-center gap-1 rounded-xl border border-white/15 bg-white/5 px-2.5 py-1.5 font-medium text-slate-200 hover:bg-white/10"

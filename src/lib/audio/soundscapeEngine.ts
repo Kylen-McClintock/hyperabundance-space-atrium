@@ -126,8 +126,8 @@ class OrbitalSoundscapeEngine {
           ? 950
           : wing === "agifutures"
           ? 1450
-          : wing === "conservatory"
-          ? 850
+          : wing === "tobehuman" || wing === "conservatory"
+          ? 820
           : 1100;
       this.filterNode.frequency.setTargetAtTime(
         targetCutoff,
